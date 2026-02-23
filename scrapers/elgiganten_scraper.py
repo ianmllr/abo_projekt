@@ -50,6 +50,7 @@ def scrape_elgiganten():
         date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
 
         cleaned_results = []
+        seen_products = set()
 
         max_pages = 3
 
@@ -71,6 +72,7 @@ def scrape_elgiganten():
             product_cards = page.query_selector_all('a[data-testid="product-card"]')
             print(f"Found {len(product_cards)} products on page {page_num}")
 
+
             for card in product_cards:
                 card_html = card.inner_html()
 
@@ -78,6 +80,11 @@ def scrape_elgiganten():
                     sku = card.get_attribute('data-item-id')
                     name_el = card.query_selector('h2')
                     product_name = name_el.inner_text().strip() if name_el else "Ukendt model"
+                    clean_name = clean_product_name(product_name)  # strip color
+
+                    if clean_name in seen_products:
+                        continue
+                    seen_products.add(clean_name)
 
                     price_data = page.evaluate(f"""async () => {{
                         const res = await fetch('/api/price/{sku}');
@@ -101,7 +108,7 @@ def scrape_elgiganten():
                         # get image url and download it
                         image_el = card.query_selector('.product-card-image img')
                         raw_image_url = image_el.get_attribute('src') if image_el else None
-                        local_image_path = download_image(raw_image_url, product_name)
+                        local_image_path = download_image(raw_image_url, clean_name)
 
                         current_price_list = price_data.get('price', {}).get('current', []) if price_data else []
 

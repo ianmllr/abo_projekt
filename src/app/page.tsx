@@ -19,7 +19,7 @@ export default function Home() {
 
     const filtered = allOffers
         .filter(o => selectedProvider === 'Alle' || o.provider === selectedProvider)
-        .filter(o => o.price_with_subscription !== null && o.price_with_subscription !== undefined && Number(o.price_with_subscription) > 0)        .sort((a, b) => {
+        .filter(o => o.price_with_subscription !== null && o.price_with_subscription !== undefined && Number(o.price_with_subscription) != null)        .sort((a, b) => {
             const aPrice = Number(a.price_with_subscription)
             const bPrice = Number(b.price_with_subscription)
             return sortOrder === 'asc' ? aPrice - bPrice : bPrice - aPrice
@@ -88,6 +88,7 @@ export default function Home() {
                         <p style={{ margin: 0 }}>
                             <strong>{offer.price_with_subscription} kr.</strong> med abonnement
                         </p>
+                        <p style={{ margin: 0, }}><strong>{offer.discount_on_product} kr. sparet </strong></p>
                         <p style={{ margin: 0, fontSize: 13, color: '#555' }}>
                             Uden abonnement: {offer.price_without_subscription} kr.
                         </p>

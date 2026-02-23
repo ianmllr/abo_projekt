@@ -64,14 +64,17 @@ if response.status_code == 200:
         # image url
         image_div = offer.find('div', class_="ribbon-container")
         if image_div:
-            img_tag = image_div.select_one('img.d-none.d-sm-block')
-            if img_tag:
-                raw_src = img_tag.get('srcset') or img_tag.get('data-srcset')
-                if raw_src:
-                    src_url = raw_src.split(' ')[0]
-                    if ".png" in src_url:
-                        src_url = src_url.split(".png")[0] + ".png"
-                    item["image_url"] = f"https://www.oister.dk{src_url}"
+            # find all images and pick the one with 'tilgift' in src (the actual product)
+            all_imgs = image_div.find_all('img')
+            for img in all_imgs:
+                src = img.get('src') or img.get('data-src') or ''
+                if 'tilgift' in src:
+                    if src.startswith('/'):
+                        item["image_url"] = f"https://www.oister.dk{src}"
+                    else:
+                        item["image_url"] = src
+                    break
+
 
         # campaign
         punchline_div = offer.find('div', class_='card__punchline')
