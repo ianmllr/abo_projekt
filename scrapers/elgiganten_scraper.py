@@ -7,10 +7,8 @@ from playwright.sync_api import sync_playwright
 import os
 
 # setup
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.makedirs(os.path.join(BASE_DIR, 'data/telmore'), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, 'public/images/telmore'), exist_ok=True)
+
 
 def clean_product_name(product_name):
     # stop at storage size bc we don't need to save color
@@ -29,16 +27,20 @@ def download_image(image_url, product_name):
     os.makedirs(os.path.join(BASE_DIR, "public/images/elgiganten"), exist_ok=True)
 
     if os.path.exists(save_path):
-        return f"/images/elgiganten/{filename}"  # web path for the JSON
+        return f"/images/elgiganten/{filename}"
 
     response = requests.get(image_url)
     if response.status_code == 200:
         with open(save_path, 'wb') as f:
             f.write(response.content)
-        return f"/images/elgiganten/{filename}"  # web path for the JSON
+        return f"/images/elgiganten/{filename}"
     return ""
 
+
 def scrape_elgiganten():
+    os.makedirs(os.path.join(BASE_DIR, 'data/elgiganten'), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, 'public/images/elgiganten'), exist_ok=True)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
@@ -71,7 +73,6 @@ def scrape_elgiganten():
 
             product_cards = page.query_selector_all('a[data-testid="product-card"]')
             print(f"Found {len(product_cards)} products on page {page_num}")
-
 
             for card in product_cards:
                 card_html = card.inner_html()
@@ -120,8 +121,6 @@ def scrape_elgiganten():
                             discount = int(price_without_subscription - price_with_subscription)
                         else:
                             discount = ""
-
-                        price_with_subscription = d.get('upfrontPrice')
 
                         entry = {
                             "product": product_name,

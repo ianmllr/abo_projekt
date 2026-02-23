@@ -5,16 +5,9 @@ import datetime
 import re
 import os
 
-
 # setup
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.makedirs(os.path.join(BASE_DIR, 'data/telmore'), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, 'public/images/telmore'), exist_ok=True)
 
-
-url = "https://www.oister.dk/tilbehor-til-abonnement"
-response = requests.get(url)
-date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
 
 def download_image(image_url, product_name):
     if not image_url or not product_name:
@@ -25,17 +18,28 @@ def download_image(image_url, product_name):
     os.makedirs(os.path.join(BASE_DIR, "public/images/oister"), exist_ok=True)
 
     if os.path.exists(save_path):
-        return f"/images/oister/{filename}"  # web path for the JSON
+        return f"/images/oister/{filename}"
 
-    response = requests.get(image_url)
-    if response.status_code == 200:
+    img_response = requests.get(image_url)
+    if img_response.status_code == 200:
         with open(save_path, 'wb') as f:
-            f.write(response.content)
-        return f"/images/oister/{filename}"  # web path for the JSON
+            f.write(img_response.content)
+        return f"/images/oister/{filename}"
     return ""
 
 
-if response.status_code == 200:
+def scrape_oister():
+    os.makedirs(os.path.join(BASE_DIR, 'data/oister'), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, 'public/images/oister'), exist_ok=True)
+
+    url = "https://www.oister.dk/tilbehor-til-abonnement"
+    response = requests.get(url)
+    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+
+    if response.status_code != 200:
+        print(f"Error! Could not fetch the page. Status code: {response.status_code}")
+        return
+
     soup = BeautifulSoup(response.text, 'html.parser')
 
     offer_list = soup.find_all('div', class_='col--double-padding-bottom')
@@ -74,7 +78,6 @@ if response.status_code == 200:
                     else:
                         item["image_url"] = src
                     break
-
 
         # campaign
         punchline_div = offer.find('div', class_='card__punchline')
@@ -145,5 +148,6 @@ if response.status_code == 200:
 
     print(f"Exported {len(scraped_data)} offers to 'data/oister/oister_offers.json'")
 
-else:
-    print(f"Error! Could not fetch the page. Status code: {response.status_code}")
+
+if __name__ == "__main__":
+    scrape_oister()

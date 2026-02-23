@@ -88,13 +88,14 @@ export default function Home() {
                         <p style={{ margin: 0 }}>
                             <strong>{offer.price_with_subscription} kr.</strong> med abonnement
                         </p>
-                        <p style={{ margin: 0, }}><strong>{offer.discount_on_product} kr. sparet </strong></p>
+                        <p style={{ margin: 0, }}>{offer.discount_on_product} kr. rabat</p>
+
                         <p style={{ margin: 0, fontSize: 13, color: '#555' }}>
                             Uden abonnement: {offer.price_without_subscription} kr.
                         </p>
                         {offer.min_cost_6_months && (
                             <p style={{ margin: 0, fontSize: 13, color: '#555' }}>
-                                Mindstepris: {offer.min_cost_6_months} kr.
+                                Mindstepris i 6 mdr.: {offer.min_cost_6_months} kr.
                             </p>
                         )}
                     </div>
