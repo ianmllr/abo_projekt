@@ -51,6 +51,7 @@ def scrape_oister():
 
     for offer in offer_list:
         item = {
+            "link": "",
             "product_name": "",
             "image_url": "",
             "provider": "Oister",
@@ -107,6 +108,15 @@ def scrape_oister():
         item["image_url"] = download_image(item["image_url"], item["product_name"])
 
         product_card = offer.find('div', class_='card--product')
+
+        # product link
+        if product_card:
+            link_tag = product_card.find('a')
+            if link_tag:
+                href = link_tag.get('href')
+                if href:
+                    item["link"] = f"https://www.oister.dk{href}" if href.startswith('/') else href
+
 
         if product_card:
             options = product_card.find_all('div', class_='card__option')

@@ -67,9 +67,16 @@ export default function OfferCard({ offer }: OfferCardProps) {
                     )}
                 </p>
 
-                <button className="mt-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-[13px] font-bold cursor-pointer self-start hover:bg-blue-700 transition-colors">
+                <a
+                    href={offer.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-[13px] font-bold self-start hover:bg-blue-700 transition-colors text-center"
+                >
                     Gå til tilbud
-                </button>
+                </a>
+
+
             </div>
         </div>
     )

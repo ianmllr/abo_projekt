@@ -9,6 +9,7 @@ const prisjagtLookup = prisjagt as Record<string, { market_price: number | null 
 
 export const allOffers: Offer[] = [
     ...telmore.map(o => ({
+        link: o.link,
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'Telmore' as const,
@@ -18,6 +19,7 @@ export const allOffers: Offer[] = [
         min_cost_6_months: o.min_cost_6_months,
     })),
     ...oister.map(o => ({
+        link: o.link,
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'Oister' as const,
@@ -27,6 +29,7 @@ export const allOffers: Offer[] = [
         min_cost_6_months: o.min_cost_6_months,
     })),
     ...elgiganten.map(o => ({
+        link: o.link,
         product_name: o.product,
         image_url: o.image_url,
         provider: 'Elgiganten' as const,

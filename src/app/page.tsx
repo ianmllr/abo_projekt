@@ -21,9 +21,10 @@ export default function Home() {
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-6">
                     {filtered.map(offer => (
                         <OfferCard
-                            key={`${offer.provider}-${offer.product_name}`}
+                            key={`${offer.provider}-${offer.product_name}-${offer.link}`}
                             offer={offer}
                         />
+
                     ))}
                 </div>
             </div>

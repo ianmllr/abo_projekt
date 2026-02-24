@@ -1,4 +1,5 @@
 export interface Offer {
+    link: string | undefined
     product_name: string
     image_url: string
     provider: string

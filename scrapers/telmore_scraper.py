@@ -55,6 +55,7 @@ def scrape_telmore():
 
     for offer in offer_list:
         item = {
+            "link": "",
             "product_name": "",
             "image_url": "",
             "provider": "Telmore",
@@ -66,6 +67,16 @@ def scrape_telmore():
             "min_cost_6_months": "",
             "saved_at": date_time
         }
+
+        # product link
+        link_div = offer.find('div', class_='mb-4')
+        if link_div:
+            link_tag = link_div.find('a')
+            if link_tag:
+                href = link_tag.get('href')
+                if href:
+                    item["link"] = f"https://www.telmore.dk{href}" if href.startswith('/') else href
+
 
         # product name
         name_tag = offer.find('strong', class_='h4')
