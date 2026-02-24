@@ -113,7 +113,7 @@ def scrape_telmore():
 
         scraped_data.append(item)
 
-    # save results to json file
+    # save results to JSON file
     with open(os.path.join(BASE_DIR, 'data/telmore/telmore_offers.json'), 'w', encoding='utf-8') as f:
         json.dump(scraped_data, f, ensure_ascii=False, indent=4)
 

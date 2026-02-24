@@ -6,6 +6,10 @@ from playwright.sync_api import sync_playwright
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+is_ci = os.environ.get('CI') == 'true'  # GitHub Actions sets this automatically
+
+
+
 # scrapes prisjagt to find the lowest price of a product currently to see if the 6-month price of a subscription is worth it
 
 def clean_search_query(product_name):
@@ -78,13 +82,12 @@ def scrape_prisjagt():
     date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=is_ci)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             viewport={"width": 1920, "height": 1080},
             locale="da-DK",
         )
-        page = context.new_page()
 
         page = context.new_page()
 
