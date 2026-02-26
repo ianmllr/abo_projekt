@@ -54,4 +54,4 @@ export const allOffers: Offer[] = [
     market_price: prisjagtLookup[offer.product_name]?.market_price ?? null,
 }))
 
-export const PROVIDERS = ['Alle', 'Telmore', 'Oister', 'Elgiganten'] as const
+export const PROVIDERS = ['Telmore', 'Oister', 'Elgiganten', 'CBB'] as const

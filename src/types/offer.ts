@@ -10,4 +10,12 @@ export interface Offer {
     market_price: number | null
 }
 
-export type SortOrder = 'asc' | 'desc' | 'saved_desc' | 'saved_asc'
+export type SortOrder =
+    | 'asc'
+    | 'desc'
+    | 'saved_desc'
+    | 'saved_asc'
+    | 'market_asc'
+    | 'market_desc'
+    | 'name_asc'
+    | 'name_desc'

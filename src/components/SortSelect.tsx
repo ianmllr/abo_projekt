@@ -6,10 +6,12 @@ interface SortSelectProps {
 }
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
-    { value: 'asc', label: 'Pris: lav til høj' },
-    { value: 'desc', label: 'Pris: høj til lav' },
-    { value: 'saved_desc', label: 'Mest sparet: høj til lav' },
-    { value: 'saved_asc', label: 'Mest sparet: lav til høj' },
+    { value: 'asc', label: 'Abonnementspris: lav til høj' },
+    { value: 'desc', label: 'Abonnementspris: høj til lav' },
+    { value: 'saved_desc', label: 'Reelt sparet: høj til lav' },
+    { value: 'saved_asc', label: 'Reelt sparet: lav til høj' },
+    { value: 'name_asc', label: 'Navn: A → Å' },
+    { value: 'name_desc', label: 'Navn: Å → A' },
 ]
 
 export default function SortSelect({ value, onChange }: SortSelectProps) {
