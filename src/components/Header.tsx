@@ -8,12 +8,12 @@ export default function Header() {
                 <div className="flex items-center gap-2">
                     <Image src="/favicon.ico" alt="Logo" width={32} height={32} />
                     <Link href="/" >
-                    <span className="text-[#cdd6e0] text-xl font-semibold tracking-tight">Abosammenligner</span>
+                    <span className="text-[#cdd6e0] text-xl font-semibold tracking-tight">Tech-tilbud</span>
                     </Link>
                 </div>
                 <nav className="text-[#7d8fa0] text-sm">
                     <Link href="/about" className="hover:text-[#cdd6e0] transition-colors">
-                        Om Abosammenligner
+                        Om Tech-tilbud
                     </Link>
                 </nav>
             </div>

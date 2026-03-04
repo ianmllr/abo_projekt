@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Abosammenligner",
+  title: "Tech-tilbud",
   description: "Sammenlign mobilabonnementer og spar penge.",
 };
 
