@@ -2,12 +2,18 @@ name: Run scrapers
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * *'  # every day at 6am
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: write
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
@@ -21,14 +27,10 @@ jobs:
       - run: python scrapers/yousee_scraper.py
       - run: python scrapers/norlys_scraper.py
       - run: python scrapers/pricerunner_scraper.py
-#     - run: python scrapers/prisjagt_scraper.py  # disabled for now because it gets blocked by cloudflare
-      - uses: actions/checkout@v3  # commit updated JSON files back to repo
-
       - name: Commit updated data
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add data/ public/images/
-          git commit -m "Update scraped data" || echo "No changes to commit"
+          git add .
+          git diff --staged --quiet || git commit -m "Update scraped data"
           git push
-      
