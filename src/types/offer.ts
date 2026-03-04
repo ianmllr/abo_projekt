@@ -4,9 +4,9 @@ export interface Offer {
     image_url: string
     provider: string
     price_with_subscription: number | null
-    price_without_subscription: number
-    discount_on_product: number
-    min_cost_6_months: number
+    price_without_subscription: number | null
+    discount_on_product: number | null
+    min_cost_6_months: number | null
     market_price: number | null
     subscription_price_monthly: number | null
     subscription_price_monthly_after_promo: number | null
