@@ -12,7 +12,7 @@ export default function Header() {
                     </Link>
                 </div>
                 <nav className="flex items-center gap-3 text-[#7d8fa0] text-sm">
-                    <Link href="/about" className="px-3 py-1.5 rounded-md border border-[#334155] hover:border-[#4a90b8] hover:text-[#cdd6e0] transition-colors">
+                    <Link href="/reminder" className="px-3 py-1.5 rounded-md border border-[#334155] hover:border-[#4a90b8] hover:text-[#cdd6e0] transition-colors">
                         Sæt en påmindelse
                     </Link>
                     <Link href="/about" className="px-3 py-1.5 rounded-md border border-[#334155] hover:border-[#4a90b8] hover:text-[#FFFFFF] transition-colors">
