@@ -15,16 +15,17 @@ DATA_DIR  = BASE_DIR / "data" / "3"
 
 BASE_URL = "https://www.3.dk"
 
-# All mobile category pages to crawl for product links
-CATEGORY_URLS = [
-    f"{BASE_URL}/shop/mobiler/apple/",
-    f"{BASE_URL}/shop/mobiler/samsung/",
-    f"{BASE_URL}/shop/mobiler/google/",
-    f"{BASE_URL}/shop/mobiler/motorola/",
-    f"{BASE_URL}/shop/mobiler/oneplus/",
-    f"{BASE_URL}/shop/mobiler/nothing/",
-    f"{BASE_URL}/shop/mobiler/",
-]
+# Category pages to crawl for product links, mapped to their product type
+CATEGORY_URLS: dict[str, str] = {
+    f"{BASE_URL}/shop/mobiler/apple/":    "phone",
+    f"{BASE_URL}/shop/mobiler/samsung/":  "phone",
+    f"{BASE_URL}/shop/mobiler/google/":   "phone",
+    f"{BASE_URL}/shop/mobiler/motorola/": "phone",
+    f"{BASE_URL}/shop/mobiler/oneplus/":  "phone",
+    f"{BASE_URL}/shop/mobiler/nothing/":  "phone",
+    f"{BASE_URL}/shop/mobiler/":          "phone",
+    f"{BASE_URL}/shop/tablets/":          "tablet",
+}
 
 # Consent cookies to skip the cookie banner on 3.dk
 CONSENT_COOKIES = [
@@ -56,6 +57,7 @@ class Offer:
     product_name: str
     image_url: str
     provider: str = "3"
+    type: str = "phone"
     signup_price: int = 0
     data_gb: int = 0
     price_without_subscription: int | None = None
@@ -267,7 +269,7 @@ def extract_subscription_info(page) -> tuple[int | None, int | None, int | None]
     return discount_on_product, subscription_price_monthly, min_cost_6_months
 
 
-def scrape_product_page(page, url: str, saved_at: str) -> list[Offer]:
+def scrape_product_page(page, url: str, saved_at: str, product_type: str = "phone") -> list[Offer]:
     # scrapes product of different options
     try:
         page.goto(url, wait_until="networkidle", timeout=30000)
@@ -338,6 +340,7 @@ def scrape_product_page(page, url: str, saved_at: str) -> list[Offer]:
             link=url,
             product_name=full_name,
             image_url=local_image_path,
+            type=product_type,
             price_without_subscription=price_without_subscription,
             price_with_subscription=price_with_subscription,
             discount_on_product=discount_on_product or 0,
@@ -348,16 +351,13 @@ def scrape_product_page(page, url: str, saved_at: str) -> list[Offer]:
 
     return offers
 
-def collect_product_links(page) -> list[str]:
-    """
-    Visit every category page and collect unique product URLs.
-    Product pages have at least 3 path segments (e.g. /shop/mobiler/apple/iphone-16/).
-    """
+def collect_product_links(page) -> list[tuple[str, str]]:
+    # returns a list of (url, type) tuples.
     seen_urls: set[str] = set()
-    product_links: list[str] = []
+    product_links: list[tuple[str, str]] = []
 
-    for cat_url in CATEGORY_URLS:
-        print(f"Scanning category: {cat_url}")
+    for cat_url, product_type in CATEGORY_URLS.items():
+        print(f"Scanning category: {cat_url} (type={product_type})")
         try:
             page.goto(cat_url, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(2000)
@@ -365,15 +365,17 @@ def collect_product_links(page) -> list[str]:
             print(f"  Could not load {cat_url}: {e}")
             continue
 
-        # Scroll to the bottom to trigger lazy-loaded product cards
+        # scroll to the bottom to trigger lazy-loaded product cards
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         page.wait_for_timeout(1500)
 
-        for anchor in page.query_selector_all('a[href*="/shop/mobiler/"]'):
+        # match anchors for both phone (/shop/mobiler/) and tablet (/shop/tablets/) pages
+        link_selector = 'a[href*="/shop/mobiler/"], a[href*="/shop/tablets/"]'
+        for anchor in page.query_selector_all(link_selector):
             href = anchor.get_attribute("href") or ""
             path_segments = [p for p in href.strip("/").split("/") if p]
 
-            # At least 3 segments means it's a product page, not a category page
+            # at least 3 segments means it's a product page, not a category page
             is_product_page = len(path_segments) >= 3
             has_no_query_params = "?" not in href
 
@@ -381,7 +383,7 @@ def collect_product_links(page) -> list[str]:
                 full_url = f"{BASE_URL}{href}" if href.startswith("/") else href
                 if full_url not in seen_urls:
                     seen_urls.add(full_url)
-                    product_links.append(full_url)
+                    product_links.append((full_url, product_type))
 
     return product_links
 
@@ -405,15 +407,15 @@ def scrape_3():
             viewport={"width": 1920, "height": 1080},
             locale="da-DK",
         )
-        context.add_cookies(CONSENT_COOKIES)
+        context.add_cookies(CONSENT_COOKIES) # type: ignore[arg-type]
         page = context.new_page()
 
         product_links = collect_product_links(page)
         print(f"\nFound {len(product_links)} unique product pages\n")
 
-        for url in product_links:
-            print(f"Scraping: {url}")
-            for offer in scrape_product_page(page, url, saved_at):
+        for url, product_type in product_links:
+            print(f"Scraping: {url} (type={product_type})")
+            for offer in scrape_product_page(page, url, saved_at, product_type):
                 if offer.product_name and offer.product_name not in seen_names:
                     seen_names.add(offer.product_name)
                     all_offers.append(offer)

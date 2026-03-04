@@ -37,7 +37,13 @@ def download_image(image_url, product_name):
     return ""
 
 
-def build_entry(product_link, product_name, local_image_path, sku, raw_data, price_data, date_time):
+CATEGORY_URLS = [
+    {"base_url": "https://www.elgiganten.dk/mobil-tablet-smartwatch/mobiltelefon", "type": "phone"},
+    {"base_url": "https://www.elgiganten.dk/mobil-tablet-smartwatch/tablet", "type": "tablet"},
+]
+
+
+def build_entry(product_link, product_name, local_image_path, sku, raw_data, price_data, date_time, product_type):
     d = raw_data.get('data', {})
     sub = d.get('subscription', {})
 
@@ -66,7 +72,8 @@ def build_entry(product_link, product_name, local_image_path, sku, raw_data, pri
         "discount_on_product": discount,
         "benefits": sub.get('bulletPoints', []),
         "saved_at": date_time,
-        "sold_out": "false"
+        "sold_out": "false",
+        "type": product_type,
     }
 
 
@@ -88,69 +95,74 @@ def scrape_elgiganten():
 
         browser_page = context.new_page()
 
-        for page_num in range(1, max_pages + 1):
-            if page_num == 1:
-                url = "https://www.elgiganten.dk/mobil-tablet-smartwatch/mobiltelefon"
-            else:
-                url = f"https://www.elgiganten.dk/mobil-tablet-smartwatch/mobiltelefon/page-{page_num}"
+        for category in CATEGORY_URLS:
+            base_url = category["base_url"]
+            product_type = category["type"]
+            print(f"\nScraping category: {base_url} (type: {product_type})")
 
-            print(f"scanning page {page_num}: {url}")
+            for page_num in range(1, max_pages + 1):
+                if page_num == 1:
+                    url = base_url
+                else:
+                    url = f"{base_url}/page-{page_num}"
 
-            try:
-                browser_page.goto(url, wait_until="networkidle")
-                browser_page.wait_for_selector('a[data-testid="product-card"]', timeout=10000)
-            except Exception as e:
-                print(f"Couldn't load page {page_num} or found no products: {e}")
-                continue
+                print(f"scanning page {page_num}: {url}")
 
-            product_cards = browser_page.query_selector_all('a[data-testid="product-card"]')
-            print(f"Found {len(product_cards)} products on page {page_num}")
+                try:
+                    browser_page.goto(url, wait_until="networkidle")
+                    browser_page.wait_for_selector('a[data-testid="product-card"]', timeout=10000)
+                except Exception as e:
+                    print(f"Couldn't load page {page_num} or found no products: {e}")
+                    continue
 
-            for card in product_cards:
-                card_html = card.inner_html()
+                product_cards = browser_page.query_selector_all('a[data-testid="product-card"]')
+                print(f"Found {len(product_cards)} products on page {page_num}")
 
-                if "Mindstepris" in card_html or "mobilrabat" in card_html.lower():
-                    sku = card.get_attribute('data-item-id')
+                for card in product_cards:
+                    card_html = card.inner_html()
 
-                    # product link
-                    href = card.get_attribute('href')
-                    product_link = f"https://www.elgiganten.dk{href}" if href and href.startswith('/') else href or ""
+                    if "Mindstepris" in card_html or "mobilrabat" in card_html.lower():
+                        sku = card.get_attribute('data-item-id')
 
-                    name_el = card.query_selector('h2')
-                    product_name = name_el.inner_text().strip() if name_el else "Ukendt model"
-                    clean_name = clean_product_name(product_name)  # strip color
+                        # product link
+                        href = card.get_attribute('href')
+                        product_link = f"https://www.elgiganten.dk{href}" if href and href.startswith('/') else href or ""
 
-                    if clean_name in seen_products:
-                        continue
-                    seen_products.add(clean_name)
+                        name_el = card.query_selector('h2')
+                        product_name = name_el.inner_text().strip() if name_el else "Ukendt model"
+                        clean_name = clean_product_name(product_name)  # strip color
 
-                    price_data = browser_page.evaluate(f"""async () => {{
-                        const res = await fetch('/api/price/{sku}');
-                        return res.ok ? res.json() : null;
-                    }}""")
+                        if clean_name in seen_products:
+                            continue
+                        seen_products.add(clean_name)
 
-                    api_payload = {"type": "Telecom", "sku": str(sku), "step": "identification"}
-                    raw_data = browser_page.evaluate("""async (payload) => {
-                        const res = await fetch('/api/subscriptions', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-                            body: JSON.stringify(payload)
-                        });
-                        return res.ok ? res.json() : null;
-                    }""", api_payload)
+                        price_data = browser_page.evaluate(f"""async () => {{
+                            const res = await fetch('/api/price/{sku}');
+                            return res.ok ? res.json() : null;
+                        }}""")
 
-                    if raw_data and 'data' in raw_data:
-                        # get image url and download it
-                        image_el = card.query_selector('.product-card-image img')
-                        raw_image_url = image_el.get_attribute('src') if image_el else None
-                        local_image_path = download_image(raw_image_url, clean_name)
+                        api_payload = {"type": "Telecom", "sku": str(sku), "step": "identification"}
+                        raw_data = browser_page.evaluate("""async (payload) => {
+                            const res = await fetch('/api/subscriptions', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                                body: JSON.stringify(payload)
+                            });
+                            return res.ok ? res.json() : null;
+                        }""", api_payload)
 
-                        entry = build_entry(product_link, product_name, local_image_path, sku, raw_data, price_data, date_time)
-                        cleaned_results.append(entry)
+                        if raw_data and 'data' in raw_data:
+                            # get image url and download it
+                            image_el = card.query_selector('.product-card-image img')
+                            raw_image_url = image_el.get_attribute('src') if image_el else None
+                            local_image_path = download_image(raw_image_url, clean_name)
 
-                    time.sleep(0.5)
+                            entry = build_entry(product_link, product_name, local_image_path, sku, raw_data, price_data, date_time, product_type)
+                            cleaned_results.append(entry)
 
-            time.sleep(2)
+                        time.sleep(0.5)
+
+                time.sleep(2)
 
     with open(os.path.join(BASE_DIR, 'data/elgiganten/elgiganten_offers.json'), 'w', encoding='utf-8') as f:
         json.dump(cleaned_results, f, ensure_ascii=False, indent=4)
