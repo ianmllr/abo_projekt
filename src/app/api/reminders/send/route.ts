@@ -1,4 +1,3 @@
-// src/app/api/reminders/send/route.ts
 import { sql } from '@/lib/db'
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
@@ -12,7 +11,7 @@ export async function POST(req: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY!)
 
     const due = await sql`
-        SELECT id, email, offer_title, offer_url
+        SELECT id, email
         FROM reminders
         WHERE sent = false AND send_at <= NOW()
     `
@@ -33,9 +32,7 @@ export async function POST(req: Request) {
             `,
         })
 
-        await sql`UPDATE reminders
-                  SET sent = true
-                  WHERE id = ${row.id}`
+        await sql`UPDATE reminders SET sent = true WHERE id = ${row.id}`
         sentCount++
     }
 
