@@ -5,6 +5,7 @@ import SortSelect from '@/components/SortSelect'
 import Header from '@/components/Header'
 import PriceRangeSlider from '@/components/PriceRangeSlider'
 import { useOffers } from '@/hooks/useOffers'
+import { Analytics } from "@vercel/analytics/next"
 
 export default function Home() {
     const { filtered, selectedProviders, setSelectedProviders, sortOrder, setSortOrder, hideNegative, setHideNegative, search, setSearch, priceRange, setPriceRange, priceMin, priceMax } = useOffers()
