@@ -36,7 +36,7 @@ export default function OfferCard({ offer }: OfferCardProps) {
 
 
                 <p className="text-xs text-[#7d8fa0] m-0">
-                    Rabat på telefonen: {offer.discount_on_product} kr.
+                    Rabat på produktet: {offer.discount_on_product} kr.
                 </p>
 
 
