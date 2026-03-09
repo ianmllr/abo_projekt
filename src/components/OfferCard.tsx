@@ -10,6 +10,7 @@ export default function OfferCard({ offer }: OfferCardProps) {
     const base = offer.market_price ?? offer.price_without_subscription
     const hasMinCost = offer.min_cost_6_months != null && offer.min_cost_6_months > 0
     const saved = hasMinCost && base != null ? base - offer.min_cost_6_months! : null
+    const savedPct = saved != null && base != null && base > 0 ? Math.round((saved / base) * 100) : null
     const isFallback = offer.market_price === null
 
     return (
@@ -86,21 +87,26 @@ export default function OfferCard({ offer }: OfferCardProps) {
 
                 <hr className="border-none border-t border-[#334155] my-1" />
 
-                <p className="text-[13px] text-[#cdd6e0] m-0 flex items-center gap-1">
-                    Penge reelt sparet efter 6 mdr.:{' '}
+                <div className="text-[13px] text-[#cdd6e0] m-0 flex items-center gap-2">
+                    <span>Penge reelt sparet efter 6 mdr.:</span>
                     {saved != null ? (
-                        <>
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap">
                             <span className={`font-bold text-[15px] ${saved > 0 ? 'text-[#4caf82]' : 'text-[#e05555]'}`}>
                                 {saved} kr.
                             </span>
+                            {savedPct != null && (
+                                <span className={`text-[12px] ${savedPct > 0 ? 'text-[#4caf82]' : 'text-[#e05555]'}`}>
+                                    ({savedPct} %)
+                                </span>
+                            )}
                             {isFallback && (
                                 <Tooltip text="Ingen markedspris fundet. Resultatet er ud fra udbyderens tal." />
                             )}
-                        </>
+                        </span>
                     ) : (
                         <span className="text-[#7d8fa0] italic">Ikke tilgængelig</span>
                     )}
-                </p>
+                </div>
 
                 <a
                     href={offer.link}
