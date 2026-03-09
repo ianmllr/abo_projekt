@@ -25,19 +25,16 @@ export function useOffers() {
             .filter(o => {
                 if (!hideNegative) return true
                 if (o.min_cost_6_months == null) return false
-                const saved = (o.market_price ?? o.price_without_subscription ?? 0) - o.min_cost_6_months
-                return saved >= 0
+                return o.market_price! - o.min_cost_6_months >= 0
             })
             .sort((a, b) => {
                 if (sortOrder === 'saved_desc' || sortOrder === 'saved_asc') {
-                    const aSaved = a.min_cost_6_months != null ? (a.market_price ?? a.price_without_subscription ?? 0) - a.min_cost_6_months : -Infinity
-                    const bSaved = b.min_cost_6_months != null ? (b.market_price ?? b.price_without_subscription ?? 0) - b.min_cost_6_months : -Infinity
+                    const aSaved = a.min_cost_6_months != null ? a.market_price! - a.min_cost_6_months : -Infinity
+                    const bSaved = b.min_cost_6_months != null ? b.market_price! - b.min_cost_6_months : -Infinity
                     return sortOrder === 'saved_desc' ? bSaved - aSaved : aSaved - bSaved
                 }
                 if (sortOrder === 'market_asc' || sortOrder === 'market_desc') {
-                    const aMarket = a.market_price ?? a.price_without_subscription ?? 0
-                    const bMarket = b.market_price ?? b.price_without_subscription ?? 0
-                    return sortOrder === 'market_asc' ? aMarket - bMarket : bMarket - aMarket
+                    return sortOrder === 'market_asc' ? a.market_price! - b.market_price! : b.market_price! - a.market_price!
                 }
                 if (sortOrder === 'name_asc' || sortOrder === 'name_desc') {
                     const cmp = a.product_name.localeCompare(b.product_name, 'da')

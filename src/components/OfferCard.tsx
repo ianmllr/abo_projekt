@@ -7,11 +7,11 @@ interface OfferCardProps {
 }
 
 export default function OfferCard({ offer }: OfferCardProps) {
-    const base = offer.market_price ?? offer.price_without_subscription
+    const base = offer.market_price
     const hasMinCost = offer.min_cost_6_months != null && offer.min_cost_6_months > 0
-    const saved = hasMinCost && base != null ? base - offer.min_cost_6_months! : null
-    const savedPct = saved != null && base != null && base > 0 ? Math.round((saved / base) * 100) : null
-    const isFallback = offer.market_price === null
+    const saved = hasMinCost ? offer.market_price! - offer.min_cost_6_months! : null
+    const savedPct = saved != null && base! > 0 ? Math.round((saved / base!) * 100) : null
+    const isFallback = false
 
     return (
         <div className="border border-[#334155] rounded-xl p-4 flex flex-row items-start gap-2 bg-[#2a3340]">
