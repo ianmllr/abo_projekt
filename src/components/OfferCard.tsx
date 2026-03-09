@@ -42,8 +42,12 @@ export default function OfferCard({ offer }: OfferCardProps) {
 
 
                 <p className="text-xs text-[#7d8fa0] m-0 flex items-center gap-1">
-                    Pris uden abonnement: {offer.price_without_subscription} kr.
-                    <Tooltip text="Ifølge abonnementudbyderen" />
+                    Pris uden abonnement:{' '}
+                    {offer.price_without_subscription ? (
+                        <>{offer.price_without_subscription} kr. <Tooltip text="Ifølge abonnementudbyderen" /></>
+                    ) : (
+                        <span className="italic">Ikke oplyst</span>
+                    )}
                 </p>
 
                 <p className="text-xs text-[#7d8fa0] m-0 flex items-center gap-1">
