@@ -62,8 +62,7 @@ def scrape_telmore():
             "product_name": "",
             "image_url": "",
             "provider": "Telmore",
-            "signup_price": "",
-            "data_gb": "",
+            "type": "phone",
             "price_without_subscription": "",
             "price_with_subscription": "",
             "discount_on_product": "",
@@ -80,11 +79,11 @@ def scrape_telmore():
                 if href:
                     item["link"] = f"https://www.telmore.dk{href}" if href.startswith('/') else href
 
-
         # product name
         name_tag = offer.find('strong', class_='h4')
         if name_tag:
             item["product_name"] = name_tag.get_text(strip=True)
+
 
         # image url
         img_div = offer.find('div', class_='carousel-image-wrapper')

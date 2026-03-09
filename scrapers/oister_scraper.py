@@ -55,7 +55,7 @@ def scrape_oister():
             "product_name": "",
             "image_url": "",
             "provider": "Oister",
-            "type": "phone",
+            "type": "tablet",
             "price_without_subscription": "",
             "price_with_subscription": "",
             "min_cost_6_months": "",
