@@ -1,6 +1,7 @@
 'use client'
 import OfferCard from '@/components/OfferCard'
 import ProviderFilter from '@/components/ProviderFilter'
+import CategoryFilter from '@/components/CategoryFilter'
 import SortSelect from '@/components/SortSelect'
 import Header from '@/components/Header'
 import PriceRangeSlider from '@/components/PriceRangeSlider'
@@ -8,13 +9,13 @@ import { useOffers } from '@/hooks/useOffers'
 import { Analytics } from "@vercel/analytics/next"
 
 export default function Home() {
-    const { filtered, selectedProviders, setSelectedProviders, sortOrder, setSortOrder, hideNegative, setHideNegative, search, setSearch, priceRange, setPriceRange, priceMin, priceMax } = useOffers()
+    const { filtered, selectedProviders, setSelectedProviders, selectedCategories, setSelectedCategories, sortOrder, setSortOrder, hideNegative, setHideNegative, search, setSearch, priceRange, setPriceRange, priceMin, priceMax } = useOffers()
 
     return (
         <>
             <Header />
             <main className="min-h-screen bg-[#20262f] p-8">
-                <div suppressHydrationWarning className="max-w-[1200px] mx-auto">
+                <div suppressHydrationWarning className="max-w-300 mx-auto">
                     <div className="flex gap-4 mb-8 flex-wrap items-center">
                         <button
                             onClick={() => setHideNegative(v => !v)}
@@ -27,6 +28,7 @@ export default function Home() {
                             Skjul tilbud du ikke sparer penge på
                         </button>
                         <ProviderFilter selected={selectedProviders} onChange={setSelectedProviders} />
+                        <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
                         <SortSelect value={sortOrder} onChange={setSortOrder} />
                         <input
                             type="text"

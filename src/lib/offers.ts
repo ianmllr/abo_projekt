@@ -26,6 +26,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'Telmore' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -38,6 +39,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'Oister' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -50,6 +52,7 @@ export const allOffers: Offer[] = [
         product_name: o.product,
         image_url: o.image_url,
         provider: 'Elgiganten' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -62,6 +65,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'CBB' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -74,6 +78,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: '3' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -86,6 +91,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'YouSee' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -98,6 +104,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'Norlys' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -110,6 +117,7 @@ export const allOffers: Offer[] = [
         product_name: o.product_name,
         image_url: o.image_url,
         provider: 'CallMe' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
@@ -124,3 +132,14 @@ export const allOffers: Offer[] = [
 }))
 
 export const PROVIDERS = ['Telmore', 'Oister', 'Elgiganten', 'CBB', '3', 'YouSee', 'Norlys'] as const
+
+export const CATEGORIES = ['phone', 'tablet', 'sound', 'gaming'] as const
+export type Category = typeof CATEGORIES[number]
+
+export const CATEGORY_LABELS: Record<Category, string> = {
+    phone: 'Mobiler',
+    tablet: 'Tablets',
+    sound: 'Lyd',
+    gaming: 'Gaming',
+}
+

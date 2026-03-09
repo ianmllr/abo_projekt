@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { allOffers, PROVIDERS } from '@/lib/offers'
+import { allOffers, PROVIDERS, CATEGORIES } from '@/lib/offers'
 import type { SortOrder } from '@/types/offer'
 
 const validOffers = allOffers.filter(o => o.min_cost_6_months != null)
@@ -8,6 +8,7 @@ const GLOBAL_MAX = Math.ceil(Math.max(...validOffers.map(o => o.min_cost_6_month
 
 export function useOffers() {
     const [selectedProviders, setSelectedProviders] = useState<string[]>([...PROVIDERS])
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([...CATEGORIES])
     const [sortOrder, setSortOrder] = useState<SortOrder>('saved_desc')
     const [hideNegative, setHideNegative] = useState(false)
     const [search, setSearch] = useState('')
@@ -18,6 +19,7 @@ export function useOffers() {
         const [lo, hi] = priceRange
         return allOffers
             .filter(o => selectedProviders.includes(o.provider))
+            .filter(o => selectedCategories.includes(o.type))
             .filter(o => !q || o.product_name.toLowerCase().includes(q))
             .filter(o => o.market_price != null)
             .filter(o => o.price_with_subscription !== null && o.price_with_subscription !== undefined)
@@ -49,7 +51,7 @@ export function useOffers() {
                     ? Number(a.price_with_subscription) - Number(b.price_with_subscription)
                     : Number(b.price_with_subscription) - Number(a.price_with_subscription)
             })
-    }, [selectedProviders, sortOrder, hideNegative, search, priceRange])
+    }, [selectedProviders, selectedCategories, sortOrder, hideNegative, search, priceRange])
 
-    return { filtered, selectedProviders, setSelectedProviders, sortOrder, setSortOrder, hideNegative, setHideNegative, search, setSearch, priceRange, setPriceRange, priceMin: GLOBAL_MIN, priceMax: GLOBAL_MAX }
+    return { filtered, selectedProviders, setSelectedProviders, selectedCategories, setSelectedCategories, sortOrder, setSortOrder, hideNegative, setHideNegative, search, setSearch, priceRange, setPriceRange, priceMin: GLOBAL_MIN, priceMax: GLOBAL_MAX }
 }

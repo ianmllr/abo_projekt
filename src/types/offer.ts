@@ -3,6 +3,7 @@ export interface Offer {
     product_name: string
     image_url: string
     provider: string
+    type: string
     price_with_subscription: number | null
     price_without_subscription: number | null
     discount_on_product: number | null
