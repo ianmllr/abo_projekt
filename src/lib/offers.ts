@@ -1,4 +1,5 @@
 import telmore from '../../data/telmore/telmore_offers.json'
+import telmore_tilgift from '../../data/telmore/telmore_tilgift_offers.json'
 import oister from '../../data/oister/oister_offers.json'
 import elgiganten from '../../data/elgiganten/elgiganten_offers.json'
 import cbb from '../../data/cbb/cbb_offers.json'
@@ -31,8 +32,21 @@ export const allOffers: Offer[] = [
         price_without_subscription: o.price_without_subscription,
         discount_on_product: o.discount_on_product,
         min_cost_6_months: o.min_cost_6_months,
-        subscription_price_monthly: null,
+        subscription_price_monthly: o.subscription_price_monthly,
         subscription_price_monthly_after_promo: null,
+    })),
+    ...telmore_tilgift.map(o => ({
+        link: o.link,
+        product_name: o.product_name,
+        image_url: o.image_url,
+        provider: 'Telmore' as const,
+        type: (o as Record<string, unknown>).type as string ?? 'phone',
+        price_with_subscription: o.price_with_subscription,
+        price_without_subscription: o.price_without_subscription,
+        discount_on_product: o.discount_on_product,
+        min_cost_6_months: o.min_cost_6_months,
+        subscription_price_monthly: o.subscription_price_monthly,
+        subscription_price_monthly_after_promo: (o as Record<string, unknown>).subscription_price_monthly_after_promo as number | null ?? null,
     })),
     ...oister.map(o => ({
         link: o.link,
