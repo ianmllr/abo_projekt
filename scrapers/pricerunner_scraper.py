@@ -136,6 +136,27 @@ def score_match(query, candidate):
         else:
             return 0.0
 
+    # disqualify if the candidate has extra bare numeric tokens the query doesn't have
+    # e.g. "Motorola Edge 60 12 512GB" has a bare "12" (unlabelled RAM) absent from the query
+    def _non_storage_digits(text, storage, model):
+        storage_str = str(storage) if storage else None
+        model_digits = set(re.findall(r'\d+', model)) if model else set()
+        result = set()
+        for tok in normalize(text).split():
+            if not tok.isdigit():
+                continue
+            if storage_str and tok == storage_str:
+                continue
+            if tok in model_digits:
+                continue
+            result.add(tok)
+        return result
+
+    q_extra_digits = _non_storage_digits(query, q_storage, q_model)
+    c_extra_digits = _non_storage_digits(candidate, c_storage, c_model)
+    if c_extra_digits - q_extra_digits:
+        return 0.0
+
     return SequenceMatcher(None, normalize(query), normalize(candidate)).ratio()
 
 
