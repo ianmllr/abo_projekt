@@ -748,23 +748,6 @@
         "sold_out": "false"
     },
     {
-        "link": "https://www.callme.dk/shop/brugte-mobiler/brugt-apple-iphone-13-pro/",
-        "product_name": "Brugt Apple iPhone 13 Pro 128GB Blue",
-        "image_url": "/images/callme/brugt_apple_iphone_13_pro_128gb_blue.webp",
-        "provider": "CallMe",
-        "type": "phone",
-        "signup_price": 0,
-        "data_gb": 0,
-        "price_without_subscription": 0,
-        "price_with_subscription": 3199,
-        "subscription_price_monthly": 79,
-        "subscription_price_monthly_after_promo": 129,
-        "min_cost_6_months": 3722,
-        "discount_on_product": 0,
-        "saved_at": "11-03-2026-06:51",
-        "sold_out": "false"
-    },
-    {
         "link": "https://www.callme.dk/shop/brugte-mobiler/brugt-apple-iphone-13/",
         "product_name": "Brugt Apple iPhone 13 128GB Midnight",
         "image_url": "/images/callme/brugt_apple_iphone_13_128gb_midnight.webp",
