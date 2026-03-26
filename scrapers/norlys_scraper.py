@@ -25,6 +25,18 @@ CATEGORY_URLS: dict[str, str] = {
 
 MAX_SUBSCRIPTIONS = 5
 
+
+def normalize_product_name(product_name: str) -> str:
+    # Strip subscription suffix from Norlys display titles.
+    cleaned = re.sub(r"\(\s*med\s+abonnement\s*\)", "", product_name, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bmed\s+abonnement\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\(\s*\)", "", cleaned)
+    cleaned = re.sub(r"\s+-\s+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = re.sub(r"^[-,]\s*", "", cleaned)
+    cleaned = re.sub(r"\s*[-,]$", "", cleaned)
+    return cleaned
+
 def download_image(image_url: str, product_name: str) -> str:
     if not image_url or not product_name:
         return ""
@@ -127,7 +139,8 @@ def scrape_product(page, href: str, product_type: str, saved_at: str) -> dict | 
 
     initial_data = api_responses[0]
     display_name = initial_data.get("displayName", "")
-    product_name = display_name or href.rstrip("/").split("/")[-1].replace("-", " ").title()
+    raw_product_name = display_name or href.rstrip("/").split("/")[-1].replace("-", " ").title()
+    product_name = normalize_product_name(raw_product_name)
 
     image_urls = initial_data.get("imageUrls", [])
     raw_image  = image_urls[0] if image_urls else ""

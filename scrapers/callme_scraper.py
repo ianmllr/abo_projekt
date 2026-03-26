@@ -3,9 +3,18 @@ import datetime
 import re
 import requests
 import os
+from pathlib import Path
+from typing import TYPE_CHECKING
 from playwright.sync_api import sync_playwright
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if TYPE_CHECKING:
+    from playwright._impl._api_structures import SetCookieParam
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+CALLME_DATA_DIR = BASE_DIR / "data" / "callme"
+CALLME_IMAGE_DIR = BASE_DIR / "public" / "images" / "callme"
+CALLME_OUTPUT_FILE = CALLME_DATA_DIR / "callme_offers.json"
 
 BASE_URL = "https://www.callme.dk"
 
@@ -19,7 +28,7 @@ CATEGORY_URLS = {
     f"{BASE_URL}/webshop/tilbehoer/kategori/tilbehor-med-abonnement/": ("accessory", {"handset", "accessory", ""}, True),
 }
 
-CONSENT_COOKIES = [
+CONSENT_COOKIES: list["SetCookieParam"] = [
     {"name": "CookieInformationConsent", "value": "true", "domain": ".callme.dk", "path": "/"},
 ]
 
@@ -73,17 +82,16 @@ def download_image(image_url, product_name):
         image_url = f"https:{image_url}"
 
     filename = re.sub(r"[^a-z0-9]", "_", product_name.lower()) + ".webp"
-    save_dir = os.path.join(BASE_DIR, "public/images/callme")
-    save_path = os.path.join(save_dir, filename)
-    os.makedirs(save_dir, exist_ok=True)
+    save_path = CALLME_IMAGE_DIR / filename
+    CALLME_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-    if os.path.exists(save_path):
+    if save_path.exists():
         return f"/images/callme/{filename}"
 
     try:
         response = requests.get(image_url, timeout=15)
         if response.status_code == 200:
-            with open(save_path, "wb") as f:
+            with save_path.open("wb") as f:
                 f.write(response.content)
             return f"/images/callme/{filename}"
     except Exception as e:
@@ -136,7 +144,7 @@ def parse_monthly_prices(minimum_price_text):
 
 
 def build_entry(hit, product_type, date_time, use_api_category=False):
-    # build a single offer entry from one API hit, using only the first (default) colour variant
+    # build a single offer entry from one API hit, using only the first (default) color variant
     # if use_api_category=True, determine product_type from the API's productCategory and product name
     
     if use_api_category:
@@ -162,7 +170,7 @@ def build_entry(hit, product_type, date_time, use_api_category=False):
         else:
             min_cost_6_months = price_with_subscription + 6 * subscription_price_monthly
 
-    # use only the first colour's default variant
+    # use only the first color's default variant
     first_color = hit.get("availableColors", [{}])[0]
     default_img = first_color.get("defaultImage", "")
     variant = next((v for v in first_color.get("variants", []) if v.get("isDefaultVariant")), None)
@@ -200,8 +208,8 @@ def build_entry(hit, product_type, date_time, use_api_category=False):
 
 
 def scrape_callme():
-    os.makedirs(os.path.join(BASE_DIR, "data/callme"), exist_ok=True)
-    os.makedirs(os.path.join(BASE_DIR, "public/images/callme"), exist_ok=True)
+    CALLME_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CALLME_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
     all_entries = []
@@ -264,11 +272,10 @@ def scrape_callme():
 
         browser.close()
 
-    output_path = os.path.join(BASE_DIR, "data/callme/callme_offers.json")
-    with open(output_path, "w", encoding="utf-8") as f:
+    with CALLME_OUTPUT_FILE.open("w", encoding="utf-8") as f:
         json.dump(all_entries, f, ensure_ascii=False, indent=4)
 
-    print(f"\nDone. Saved {len(all_entries)} offers to '{output_path}'")
+    print(f"\nDone. Saved {len(all_entries)} offers to '{CALLME_OUTPUT_FILE}'")
 
 
 if __name__ == "__main__":
