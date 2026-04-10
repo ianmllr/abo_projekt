@@ -420,54 +420,6 @@
         "saved_at": "10-04-2026-07:25"
     },
     {
-        "link": "https://shop.norlys.dk/shop/lenovo/lenovo-loq-15i5-12450hx4050-med-abonnement-06b40a93/#/grey/1000-gb/1",
-        "product_name": "Lenovo LOQ 15/i5-12450HX/4050",
-        "image_url": "/images/norlys/lenovo_loq_15_i5_12450hx_4050.webp",
-        "type": "gaming",
-        "price_without_subscription": 6999.0,
-        "price_with_subscription": 5799.0,
-        "discount_on_product": 1200.0,
-        "min_cost_6_months": 6672.0,
-        "subscription_price_monthly": 129.0,
-        "saved_at": "10-04-2026-07:25"
-    },
-    {
-        "link": "https://shop.norlys.dk/shop/lenovo/lenovo-loq-17i5-13450hx5050-med-abonnement-2ca0aa66/#/grey/1000-gb/1",
-        "product_name": "Lenovo LOQ 17/i5-13450HX/5050",
-        "image_url": "/images/norlys/lenovo_loq_17_i5_13450hx_5050.webp",
-        "type": "gaming",
-        "price_without_subscription": 9499.0,
-        "price_with_subscription": 8299.0,
-        "discount_on_product": 1200.0,
-        "min_cost_6_months": 9172.0,
-        "subscription_price_monthly": 129.0,
-        "saved_at": "10-04-2026-07:25"
-    },
-    {
-        "link": "https://shop.norlys.dk/shop/lenovo/lenovo-legion-5-15i7-13650hx24gb1tb5050-med-abonnement-44eab2fa/#/grey/1000-gb/1",
-        "product_name": "Lenovo Legion 5 15/i7-13650HX/24GB/1TB/5050",
-        "image_url": "/images/norlys/lenovo_legion_5_15_i7_13650hx_24gb_1tb_5050.webp",
-        "type": "gaming",
-        "price_without_subscription": 9499.0,
-        "price_with_subscription": 8299.0,
-        "discount_on_product": 1200.0,
-        "min_cost_6_months": 9172.0,
-        "subscription_price_monthly": 129.0,
-        "saved_at": "10-04-2026-07:25"
-    },
-    {
-        "link": "https://shop.norlys.dk/shop/lenovo/lenovo-legion-5-15i7-13650hx24gb1tb5070-med-abonnement-2f78d8df/#/grey/1000-gb/1",
-        "product_name": "Lenovo Legion 5 15/i7-13650HX/24GB/1TB/5070",
-        "image_url": "/images/norlys/lenovo_legion_5_15_i7_13650hx_24gb_1tb_5070.webp",
-        "type": "gaming",
-        "price_without_subscription": 12499.0,
-        "price_with_subscription": 10799.0,
-        "discount_on_product": 1700.0,
-        "min_cost_6_months": 11672.0,
-        "subscription_price_monthly": 129.0,
-        "saved_at": "10-04-2026-07:25"
-    },
-    {
         "link": "https://shop.norlys.dk/shop/tilbehor-med-abonnement/samsung-galaxy-watch8-40mm-bt-med-abonnement/#/grafit/1",
         "product_name": "Samsung Galaxy Watch8 40mm BT Grafit",
         "image_url": "/images/norlys/samsung_galaxy_watch8_40mm_bt_grafit.webp",
