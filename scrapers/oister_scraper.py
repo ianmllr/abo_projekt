@@ -9,6 +9,11 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AFFILIATE_PREFIX = "https://go.adt284.net/t/t?a=1666103641&as=2054240298&t=2&tk=1&url="
 
+# Blocked products due to bad naming by oister (will be skipped)
+BLOCKED_PRODUCTS = [
+    "Robotstøvsuger"
+]
+
 
 def download_image(image_url, product_name):
     if not image_url or not product_name:
@@ -32,11 +37,9 @@ def download_image(image_url, product_name):
 def product_name_from_url(href, fallback_name):
 
     # the url pattern is always: <subscription-description>-inkl-<product-name>
-    # We split on '-inkl-' and take everything after it.
     url = href.rstrip('/').split('/')[-1]  # take last path segment
     if '-inkl-' in url:
         product_part = url.split('-inkl-', 1)[1]
-        # title-case each word, upper-casing likely model identifiers (e.g. a11, a8)
         words = product_part.replace('-', ' ').split()
         titled = []
         for w in words:
@@ -163,8 +166,13 @@ def scrape_oister():
 
 
         if product_card:
-            if "brugt" in item.get("product_name", "").lower():
-                print(f"  Skipping used product: {item['product_name']}")
+            # Check if product is in blocklist
+            product_name_lower = item.get("product_name", "").lower()
+            is_blocked = any(keyword.lower() in product_name_lower for keyword in BLOCKED_PRODUCTS)
+            
+            if is_blocked:
+                matched_keyword = next(keyword for keyword in BLOCKED_PRODUCTS if keyword.lower() in product_name_lower)
+                print(f"  Skipping blocked product: {item['product_name']} (matched: '{matched_keyword}')")
             else:
                 scraped_data.append(item)
 
