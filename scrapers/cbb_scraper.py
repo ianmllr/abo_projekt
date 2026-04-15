@@ -1,40 +1,29 @@
-import json
-import datetime
 import re
 import requests
 import os
+from pathlib import Path
+from typing import TYPE_CHECKING
 from playwright.sync_api import sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print, offer_summary
+
+if TYPE_CHECKING:
+    from playwright._impl._api_structures import SetCookieParam
 
 # setup
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data" / "cbb"
+IMAGE_DIR = BASE_DIR / "public" / "images" / "cbb"
+OUTPUT_PATH = DATA_DIR / "cbb_offers.json"
 
 
 def download_image(image_url, product_name):
-    if not image_url or not product_name:
-        return ""
-
-    # cbb uses relative image paths, so we prepend the domain
-    if image_url.startswith('/'):
-        image_url = f"https://www.cbb.dk{image_url}"
-
-    # clean product name to create a safe filename
-    filename = re.sub(r'[^a-z0-9]', '_', product_name.lower()) + ".webp"
-    save_path = os.path.join(BASE_DIR, f"public/images/cbb/{filename}")
-    os.makedirs(os.path.join(BASE_DIR, "public/images/cbb"), exist_ok=True)
-
-    if os.path.exists(save_path):
-        return f"/images/cbb/{filename}"
-
-    try:
-        response = requests.get(image_url)
-        if response.status_code == 200:
-            with open(save_path, 'wb') as f:
-                f.write(response.content)
-            return f"/images/cbb/{filename}"
-    except Exception as e:
-        print(f"Couldn't download image for {product_name}: {e}")
-
-    return ""
+    return download_image_cached(
+        image_url,
+        product_name,
+        IMAGE_DIR,
+        "/images/cbb",
+        base_url="https://www.cbb.dk",
+    )
 
 
 def parse_price(text):
@@ -55,10 +44,10 @@ def get_min_cost_from_page(page, url):
         page.goto(url, wait_until="networkidle", timeout=30000)
         page.wait_for_timeout(1500)
 
-        # --- Kontant / upfront price ---
+        # kontant pris / upfront price
         kontant_price = None
 
-        # Strategy 1: look for a "Mindstepris inkl. X mdr. abonnement" line — take the LAST number
+        # look for a "Mindstepris inkl. X mdr. abonnement" line - take the LAST number
         mindste_texts = page.locator('text=/Mindstepris/').all_text_contents()
         for raw in mindste_texts:
             raw = raw.replace('\xa0', ' ')
@@ -66,7 +55,7 @@ def get_min_cost_from_page(page, url):
             if matches:
                 return int(matches[-1].replace('.', ''))
 
-        # Strategy 2: "Kontant" price block
+        # fallback : "Kontant" price block
         for selector in ['text=Kontant', 'text=Betal kontant', 'text=Betales kontant']:
             kontant_block = page.locator(selector).first
             if kontant_block.count():
@@ -80,7 +69,7 @@ def get_min_cost_from_page(page, url):
                     pass
 
         if not kontant_price:
-            # Strategy 3: "Betales nu" total
+            # fallback: "Betales nu" total
             try:
                 betales_nu_el = page.locator('text=Betales nu').locator('xpath=following-sibling::*[1]').first
                 if betales_nu_el.count():
@@ -93,7 +82,7 @@ def get_min_cost_from_page(page, url):
                 pass
 
         if not kontant_price:
-            # Strategy 4: largest standalone price-looking number on the page
+            # fallback: largest standalone price-looking number on the page
             price_els = page.locator('text=/^\\d{1,2}\\.\\d{3}\\s*kr\\.?$/').all_text_contents()
             candidates = []
             for t in price_els:
@@ -187,10 +176,10 @@ def build_entry(phone, page, date_time):
 
 
 def scrape_cbb():
-    os.makedirs(os.path.join(BASE_DIR, 'data/cbb'), exist_ok=True)
-    os.makedirs(os.path.join(BASE_DIR, 'public/images/cbb'), exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    date_time = now_timestamp()
     cleaned_results = []
 
     # cbb's direct api endpoint for loading phones
@@ -221,24 +210,32 @@ def scrape_cbb():
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         # accept cookies up front by injecting consent cookies
-        context.add_cookies([
+        consent_cookies: list["SetCookieParam"] = [
             {"name": "CookieInformationConsent", "value": "true", "domain": ".cbb.dk", "path": "/"},
-        ])
+        ]
+        context.add_cookies(consent_cookies)
         page = context.new_page()
 
         for phone in phones_list:
             entry = build_entry(phone, page, date_time)
-            if "brugt" not in entry.get("product_name", "").lower():
+            product_name = str(entry.get("product_name", ""))
+            if "brugt" not in product_name.lower():
                 cleaned_results.append(entry)
+                offer_summary(
+                    product_name,
+                    sub=entry["price_with_subscription"],
+                    rabat=entry["discount_on_product"],
+                    kontant=entry["price_without_subscription"],
+                    min6=entry["min_cost_6_months"],
+                    md=entry["subscription_price_monthly"],
+                )
             else:
-                print(f"  Skipping used product: {entry['product_name']}")
+                print(f"  Skipping used product: {product_name}")
 
         browser.close()
 
     # save output
-    output_path = os.path.join(BASE_DIR, 'data/cbb/cbb_offers.json')
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(cleaned_results, f, ensure_ascii=False, indent=4)
+    write_json(OUTPUT_PATH, cleaned_results)
 
     print(f"\nScraping complete. Saved {len(cleaned_results)} offers to 'cbb_offers.json'")
 

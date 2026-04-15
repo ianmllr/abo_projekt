@@ -1,14 +1,13 @@
-import json
 import re
-import datetime
 import dataclasses
-import requests
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import ViewportSize, sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print
 
 BASE_DIR  = Path(__file__).parent.parent
 IMAGE_DIR = BASE_DIR / "public" / "images" / "yousee"
 DATA_DIR  = BASE_DIR / "data" / "yousee"
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 
 BASE_URL = "https://yousee.dk"
 
@@ -49,25 +48,7 @@ def parse_price(text: str) -> int | None:
 
 def download_image(image_url: str, product_name: str) -> str:
     # download image if it doesn't exist
-    if not image_url or not product_name:
-        return ""
-
-    filename = re.sub(r"[^a-z0-9]", "_", product_name.lower()) + ".webp"
-    save_path = IMAGE_DIR / filename
-    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-
-    if save_path.exists():
-        return f"/images/yousee/{filename}"
-
-    try:
-        response = requests.get(image_url, timeout=15)
-        if response.status_code == 200:
-            save_path.write_bytes(response.content)
-            return f"/images/yousee/{filename}"
-    except Exception as e:
-        print(f"  Could not download image for '{product_name}': {e}")
-
-    return ""
+    return download_image_cached(image_url, product_name, IMAGE_DIR, "/images/yousee")
 
 
 def accept_cookies(page) -> None:
@@ -164,7 +145,7 @@ def scrape_yousee():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-    saved_at   = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    saved_at   = now_timestamp()
     all_offers: list[Offer] = []
     seen_names: set[str]    = set()
 
@@ -176,7 +157,7 @@ def scrape_yousee():
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
-            viewport={"width": 1920, "height": 1080},
+            viewport=VIEWPORT,
             locale="da-DK",
         )
         page = context.new_page()
@@ -187,7 +168,7 @@ def scrape_yousee():
         page.wait_for_timeout(2000)
         accept_cookies(page)
 
-        # ── Scrape each category listing page ────────────────────────────────
+        # scrape each category listing page
         for cat_url, product_type in CATEGORY_URLS.items():
             print(f"\nScraping category: {cat_url} (type={product_type})")
 
@@ -220,10 +201,9 @@ def scrape_yousee():
         context.close()
         browser.close()
 
-    # ── Persist results ───────────────────────────────────────────────────────
+    # save results
     output_path = DATA_DIR / "yousee_offers.json"
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump([dataclasses.asdict(o) for o in all_offers], f, ensure_ascii=False, indent=4)
+    write_json(output_path, [dataclasses.asdict(o) for o in all_offers])
 
     print(f"\nDone. Saved {len(all_offers)} offers to '{output_path}'")
 

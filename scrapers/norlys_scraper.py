@@ -1,13 +1,12 @@
-import json
 import re
-import datetime
-import requests
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import ViewportSize, sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print
 
 BASE_DIR  = Path(__file__).parent.parent
 IMAGE_DIR = BASE_DIR / "public" / "images" / "norlys"
 DATA_DIR  = BASE_DIR / "data" / "norlys"
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 
 SHOP_BASE   = "https://shop.norlys.dk"
 CONTEXT_ID  = "326701"
@@ -38,29 +37,13 @@ def normalize_product_name(product_name: str) -> str:
     return cleaned
 
 def download_image(image_url: str, product_name: str) -> str:
-    if not image_url or not product_name:
-        return ""
-
-    filename = re.sub(r"[^a-z0-9]", "_", product_name.lower()) + ".webp"
-    save_path = IMAGE_DIR / filename
-    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-
-    if save_path.exists():
-        return f"/images/norlys/{filename}"
-
-    # Norlys images may be relative paths
-    if image_url.startswith("/"):
-        image_url = SHOP_BASE + image_url
-
-    try:
-        response = requests.get(image_url, timeout=15)
-        if response.status_code == 200:
-            save_path.write_bytes(response.content)
-            return f"/images/norlys/{filename}"
-    except Exception as e:
-        print(f"  Could not download image for '{product_name}': {e}")
-
-    return ""
+    return download_image_cached(
+        image_url,
+        product_name,
+        IMAGE_DIR,
+        "/images/norlys",
+        base_url=SHOP_BASE,
+    )
 
 
 
@@ -192,7 +175,7 @@ def scrape_norlys():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-    saved_at   = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    saved_at   = now_timestamp()
     all_offers = []
     seen_slugs: set[str] = set()
 
@@ -204,7 +187,7 @@ def scrape_norlys():
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
-            viewport={"width": 1920, "height": 1080},
+            viewport=VIEWPORT,
             locale="da-DK",
         )
         page = context.new_page()
@@ -239,8 +222,7 @@ def scrape_norlys():
         browser.close()
 
     output_path = DATA_DIR / "norlys_offers.json"
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_offers, f, ensure_ascii=False, indent=4)
+    write_json(output_path, all_offers)
 
     print(f"\nDone. Saved {len(all_offers)} offers to '{output_path}'")
 

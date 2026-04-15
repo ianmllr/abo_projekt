@@ -1,11 +1,9 @@
-import json
-import datetime
 import re
-import requests
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 from playwright.sync_api import sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print, offer_summary
 
 if TYPE_CHECKING:
     from playwright._impl._api_structures import SetCookieParam
@@ -72,31 +70,13 @@ def get_product_type_from_api_category(api_category, product_name=""):
 
 
 def download_image(image_url, product_name):
-    if not image_url or not product_name:
-        return ""
-
-    if image_url.startswith("/"):
-        image_url = f"{BASE_URL}{image_url}"
-    elif image_url.startswith("//"):
-        image_url = f"https:{image_url}"
-
-    filename = re.sub(r"[^a-z0-9]", "_", product_name.lower()) + ".webp"
-    save_path = CALLME_IMAGE_DIR / filename
-    CALLME_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-
-    if save_path.exists():
-        return f"/images/callme/{filename}"
-
-    try:
-        response = requests.get(image_url, timeout=15)
-        if response.status_code == 200:
-            with save_path.open("wb") as f:
-                f.write(response.content)
-            return f"/images/callme/{filename}"
-    except Exception as e:
-        print(f"  Couldn't download image for '{product_name}': {e}")
-
-    return ""
+    return download_image_cached(
+        image_url,
+        product_name,
+        CALLME_IMAGE_DIR,
+        "/images/callme",
+        base_url=BASE_URL,
+    )
 
 
 def parse_price(text):
@@ -225,7 +205,7 @@ def scrape_callme():
     CALLME_DATA_DIR.mkdir(parents=True, exist_ok=True)
     CALLME_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    date_time = now_timestamp()
     all_entries = []
     seen_names = set()
 
@@ -282,12 +262,18 @@ def scrape_callme():
                 if name and name not in seen_names and "brugt" not in name.lower():
                     seen_names.add(name)
                     all_entries.append(entry)
-                    print(f"  {name}: pris={entry['price_with_subscription']} kr, min6={entry['min_cost_6_months']} kr, udsolgt={entry['sold_out']}")
+                    offer_summary(
+                        name,
+                        sub=entry["price_with_subscription"],
+                        rabat=entry["discount_on_product"],
+                        kontant=entry["price_without_subscription"],
+                        min6=entry["min_cost_6_months"],
+                        md=entry["subscription_price_monthly"],
+                    )
 
         browser.close()
 
-    with CALLME_OUTPUT_FILE.open("w", encoding="utf-8") as f:
-        json.dump(all_entries, f, ensure_ascii=False, indent=4)
+    write_json(CALLME_OUTPUT_FILE, all_entries)
 
     print(f"\nDone. Saved {len(all_entries)} offers to '{CALLME_OUTPUT_FILE}'")
 

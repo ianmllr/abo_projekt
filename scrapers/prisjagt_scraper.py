@@ -4,12 +4,15 @@ import re
 import datetime
 import random
 import time
-from typing import cast
+from pathlib import Path
 from difflib import SequenceMatcher
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import ViewportSize, sync_playwright
 from playwright_stealth import Stealth
+from provider_sources import PROVIDER_SOURCES
+from scraper_utils import log as print
 
-BASE_DIR = cast(str, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = Path(__file__).resolve().parent.parent
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 
 is_ci = os.environ.get('CI') == 'true'
 
@@ -212,7 +215,7 @@ def get_market_price(page, product_name):
 
     print(f"  -> Matched: '{best_title}' (score={best_score:.2f})")
 
-    # danish format: "." is thousands separator — e.g. "3.845 kr." → 3845
+    # get number as int instead of danihs number (eg 4.299 -> 4299)
     raw = best_price_el.inner_text().strip()
     price_clean = re.sub(r'\.(?=\d{3}(\D|$))', '', raw)
     price_clean = re.sub(r',\d+', '', price_clean)
@@ -224,7 +227,7 @@ def make_fresh_page(browser):
 
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        viewport={"width": 1920, "height": 1080},
+        viewport=VIEWPORT,
         locale="da-DK",
         timezone_id="Europe/Copenhagen",
         color_scheme="light",
@@ -243,29 +246,18 @@ def make_fresh_page(browser):
 
 
 def scrape_prisjagt():
-    os.makedirs(os.path.join(BASE_DIR, 'data/prisjagt'), exist_ok=True)
-
-    providers = [
-        ('data/telmore/telmore_offers.json', 'product_name'),
-        ('data/telmore_tilgift/telmore_tilgift_offers.json', 'product_name'),
-        ('data/oister/oister_offers.json', 'product_name'),
-        ('data/elgiganten/elgiganten_offers.json', 'product'),
-        ('data/cbb/cbb_offers.json', 'product_name'),
-        ('data/3/3_offers.json', 'product_name'),
-        ('data/yousee/yousee_offers.json', 'product_name'),
-        ('data/norlys/norlys_offers.json', 'product_name'),
-        ('data/callme/callme_offers.json', 'product_name')
-        ,
-    ]
+    (BASE_DIR / 'data' / 'prisjagt').mkdir(parents=True, exist_ok=True)
 
     products = []
-    for path, name_field in providers:
-        full_path = os.path.join(BASE_DIR, path)
-        if os.path.exists(full_path):
-            with open(full_path, encoding='utf-8') as f:
+    for path, name_field in PROVIDER_SOURCES:
+        full_path = BASE_DIR / path
+        if full_path.exists():
+            with full_path.open(encoding='utf-8') as f:
                 offers = json.load(f)
             for offer in offers:
                 name = offer.get(name_field, '')
+                if not name and name_field == 'product_name':
+                    name = offer.get('product', '')
                 if name:
                     products.append(name)
 
@@ -317,7 +309,7 @@ def scrape_prisjagt():
         context.close()
         browser.close()
 
-    with open(os.path.join(BASE_DIR, 'data/prisjagt/prisjagt_prices.json'), 'w', encoding='utf-8') as f:
+    with (BASE_DIR / 'data' / 'prisjagt' / 'prisjagt_prices.json').open('w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 
     print(f"\nLooked up {len(results)} products.")

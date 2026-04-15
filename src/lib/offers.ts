@@ -13,8 +13,10 @@ import type { Offer } from '@/types/offer'
 
 type ElgigantenOffer = {
     link: string
-    product: string
+    product_name?: string
+    product?: string
     image_url: string
+    provider?: string
     type?: string
     price_with_subscription: number
     price_without_subscription: number
@@ -77,9 +79,9 @@ export const allOffers: Offer[] = [
     })),
     ...elgiganten.map(o => ({
         link: o.link,
-        product_name: o.product,
+        product_name: o.product_name ?? o.product ?? '',
         image_url: o.image_url,
-        provider: 'Elgiganten' as const,
+        provider: (o.provider as 'Elgiganten') ?? 'Elgiganten',
         type: o.type ?? 'phone',
         price_with_subscription: o.price_with_subscription,
         price_without_subscription: o.price_without_subscription,

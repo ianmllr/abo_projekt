@@ -1,16 +1,15 @@
-import json
 import re
-import datetime
 import dataclasses
-import requests
 import os
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import ViewportSize, sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print, offer_summary
 
 
 BASE_DIR = Path(__file__).parent.parent
 IMAGE_DIR = BASE_DIR / "public" / "images" / "3"
 DATA_DIR  = BASE_DIR / "data" / "3"
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 
 BASE_URL = "https://www.3.dk"
 
@@ -64,21 +63,7 @@ def parse_price(text: str) -> int | None:
 
 
 def download_image(image_url: str, product_name: str) -> str:
-    if not image_url or not product_name:
-        return ""
-    filename = re.sub(r"[^a-z0-9]", "_", product_name.lower()) + ".webp"
-    save_path = IMAGE_DIR / filename
-    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-    if save_path.exists():
-        return f"/images/3/{filename}"
-    try:
-        response = requests.get(image_url, timeout=15)
-        if response.status_code == 200:
-            save_path.write_bytes(response.content)
-            return f"/images/3/{filename}"
-    except Exception as e:
-        print(f"  [WARN] Could not download image for '{product_name}': {e}")
-    return ""
+    return download_image_cached(image_url, product_name, IMAGE_DIR, "/images/3")
 
 
 def find_product_image(page) -> str:
@@ -166,12 +151,22 @@ def scrape_product_page(page, url: str, saved_at: str, product_type: str = "phon
     if not min_cost_6_months and price_with_subscription and subscription_price_monthly:
         min_cost_6_months = price_with_subscription + (6 * subscription_price_monthly)
 
+    price_without_subscription = (
+        price_with_subscription + discount_on_product
+        if price_with_subscription is not None and discount_on_product is not None
+        else price_with_subscription
+    )
+
     image_url = find_product_image(page)
     local_image_path = download_image(image_url, full_name)
 
-    print(
-        f"  {full_name}: kontant={price_with_subscription}, "
-        f"rabat={discount_on_product}, min6={min_cost_6_months}, md={subscription_price_monthly}"
+    offer_summary(
+        full_name,
+        sub=price_with_subscription,
+        rabat=discount_on_product,
+        kontant=price_without_subscription,
+        min6=min_cost_6_months,
+        md=subscription_price_monthly,
     )
 
     return Offer(
@@ -218,7 +213,7 @@ def collect_product_links(page) -> list[tuple[str, str]]:
 
 def scrape_3():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    saved_at = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    saved_at = now_timestamp()
     all_offers: list[Offer] = []
     seen_names: set[str] = set()
 
@@ -230,7 +225,7 @@ def scrape_3():
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
-            viewport={"width": 1920, "height": 1080},
+            viewport=VIEWPORT,
             locale="da-DK",
         )
         context.add_cookies(CONSENT_COOKIES)  # type: ignore[arg-type]
@@ -247,8 +242,7 @@ def scrape_3():
                 all_offers.append(offer)
 
     output_path = DATA_DIR / "3_offers.json"
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump([dataclasses.asdict(o) for o in all_offers], f, ensure_ascii=False, indent=4)
+    write_json(output_path, [dataclasses.asdict(o) for o in all_offers])
 
     print(f"\nDone. Saved {len(all_offers)} offers to '{output_path}'")
 

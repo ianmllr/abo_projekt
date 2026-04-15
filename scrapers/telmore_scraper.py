@@ -1,33 +1,19 @@
-import json
-import os
-import requests
-import datetime
 import re
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from pathlib import Path
+from playwright.sync_api import ViewportSize, sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print
 
 # setup
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data" / "telmore"
+IMAGE_DIR = BASE_DIR / "public" / "images" / "telmore"
+OUTPUT_PATH = DATA_DIR / "telmore_offers.json"
+VIEWPORT: ViewportSize = {"width": 1920, "height": 10000}
 
 
 def download_image(image_url, product_name):
-    if not image_url:
-        return ""
-
-    # create a clean filename from product name
-    filename = re.sub(r'[^a-z0-9]', '_', product_name.lower()) + ".webp"
-    save_path = os.path.join(BASE_DIR, f"public/images/telmore/{filename}")
-    os.makedirs(os.path.join(BASE_DIR, "public/images/telmore"), exist_ok=True)
-
-    if os.path.exists(save_path):
-        return f"/images/telmore/{filename}"
-
-    img_response = requests.get(image_url)
-    if img_response.status_code == 200:
-        with open(save_path, 'wb') as f:
-            f.write(img_response.content)
-        return f"/images/telmore/{filename}"
-    return ""
+    return download_image_cached(image_url, product_name, IMAGE_DIR, "/images/telmore")
 
 
 def scrape_detail_page(page, url):
@@ -47,11 +33,11 @@ def scrape_detail_page(page, url):
 
 
 def scrape_telmore():
-    os.makedirs(os.path.join(BASE_DIR, 'data/telmore'), exist_ok=True)
-    os.makedirs(os.path.join(BASE_DIR, 'public/images/telmore'), exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     url = "https://www.telmore.dk/shop/mobiltelefoner"
-    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    date_time = now_timestamp()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -59,7 +45,7 @@ def scrape_telmore():
             args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
         )
         # very tall viewport to load images for all products
-        page = browser.new_page(viewport={"width": 1920, "height": 10000})
+        page = browser.new_page(viewport=VIEWPORT)
         page.goto(url, timeout=60000, wait_until="domcontentloaded")
         page.wait_for_selector('div.carousel-image-wrapper')
         page.wait_for_timeout(3000)
@@ -136,21 +122,29 @@ def scrape_telmore():
 
             # subscription monthly price — requires visiting detail page
             if item["link"]:
-                print(f"  Scraping detail: {item['product_name']} -> {item['link']}")
                 item["subscription_price_monthly"] = scrape_detail_page(page, item["link"])
 
             if "brugt" in item["product_name"].lower():
                 print(f"  Skipping used product: {item['product_name']}")
                 continue
 
+            def fmt(value):
+                return value if value not in (None, "") else "-"
+
             scraped_data.append(item)
-            print(f"    subscription_price_monthly={item['subscription_price_monthly']}")
+            print(
+                f"  {item['product_name']}: "
+                f"sub={fmt(item['price_with_subscription'])}, "
+                f"rabat={fmt(item['discount_on_product'])}, "
+                f"kontant={fmt(item['price_without_subscription'])}, "
+                f"min6={fmt(item['min_cost_6_months'])}, "
+                f"md={fmt(item['subscription_price_monthly'])}"
+            )
 
         browser.close()
 
     # save results to JSON file
-    with open(os.path.join(BASE_DIR, 'data/telmore/telmore_offers.json'), 'w', encoding='utf-8') as f:
-        json.dump(scraped_data, f, ensure_ascii=False, indent=4)
+    write_json(OUTPUT_PATH, scraped_data)
 
     print(f"Exported {len(scraped_data)} offers")
 

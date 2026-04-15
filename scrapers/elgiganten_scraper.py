@@ -1,13 +1,14 @@
-import json
 import time
-import datetime
 import re
-import requests
-from playwright.sync_api import sync_playwright
-import os
+from playwright.sync_api import ViewportSize, sync_playwright
+from pathlib import Path
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print, offer_summary
 
 # setup
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
+IMAGE_DIR = BASE_DIR / "public" / "images" / "elgiganten"
+OUTPUT_PATH = BASE_DIR / "data" / "elgiganten" / "elgiganten_offers.json"
+VIEWPORT: ViewportSize = {"width": 1920, "height": 10000}
 
 
 def clean_product_name(product_name):
@@ -19,22 +20,7 @@ def clean_product_name(product_name):
 
 
 def download_image(image_url, product_name):
-    if not image_url or not product_name:
-        return ""
-
-    filename = re.sub(r'[^a-z0-9]', '_', product_name.lower()) + ".webp"
-    save_path = os.path.join(BASE_DIR, f"public/images/elgiganten/{filename}")
-    os.makedirs(os.path.join(BASE_DIR, "public/images/elgiganten"), exist_ok=True)
-
-    if os.path.exists(save_path):
-        return f"/images/elgiganten/{filename}"
-
-    response = requests.get(image_url)
-    if response.status_code == 200:
-        with open(save_path, 'wb') as f:
-            f.write(response.content)
-        return f"/images/elgiganten/{filename}"
-    return ""
+    return download_image_cached(image_url, product_name, IMAGE_DIR, "/images/elgiganten")
 
 
 CATEGORY_URLS = [
@@ -58,8 +44,9 @@ def build_entry(product_link, product_name, local_image_path, raw_data, price_da
 
     return {
         "link": product_link,
-        "product": product_name,
+        "product_name": product_name,
         "image_url": local_image_path,
+        "provider": "Elgiganten",
         "type": product_type,
         "price_without_subscription": price_without_subscription,
         "price_with_subscription": price_with_subscription,
@@ -71,10 +58,10 @@ def build_entry(product_link, product_name, local_image_path, raw_data, price_da
 
 
 def scrape_elgiganten():
-    os.makedirs(os.path.join(BASE_DIR, 'data/elgiganten'), exist_ok=True)
-    os.makedirs(os.path.join(BASE_DIR, 'public/images/elgiganten'), exist_ok=True)
+    (BASE_DIR / 'data' / 'elgiganten').mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / 'public' / 'images' / 'elgiganten').mkdir(parents=True, exist_ok=True)
 
-    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    date_time = now_timestamp()
     cleaned_results = []
     seen_products = set()
     max_pages = 3
@@ -83,7 +70,7 @@ def scrape_elgiganten():
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            viewport={"width": 1920, "height": 10000}
+            viewport=VIEWPORT
         )
 
         browser_page = context.new_page()
@@ -150,15 +137,22 @@ def scrape_elgiganten():
                             raw_image_url = image_el.get_attribute('src') if image_el else None
                             local_image_path = download_image(raw_image_url, clean_name)
 
-                            entry = build_entry(product_link, product_name, local_image_path, raw_data, price_data, date_time, product_type)
+                            entry = build_entry(product_link, clean_name, local_image_path, raw_data, price_data, date_time, product_type)
                             cleaned_results.append(entry)
+                            offer_summary(
+                                clean_name,
+                                sub=entry["price_with_subscription"],
+                                rabat=entry["discount_on_product"],
+                                kontant=entry["price_without_subscription"],
+                                min6=entry["min_cost_6_months"],
+                                md=entry["subscription_price_monthly"],
+                            )
 
                         time.sleep(0.5)
 
                 time.sleep(2)
 
-    with open(os.path.join(BASE_DIR, 'data/elgiganten/elgiganten_offers.json'), 'w', encoding='utf-8') as f:
-        json.dump(cleaned_results, f, ensure_ascii=False, indent=4)
+    write_json(OUTPUT_PATH, cleaned_results)
 
     print(f"\n Scanned {max_pages} pages. Saved {len(cleaned_results)} offers 'elgiganten_offers.json'")
 

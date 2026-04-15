@@ -5,11 +5,15 @@ import datetime
 import random
 import time
 from difflib import SequenceMatcher
-from playwright.sync_api import sync_playwright
+from pathlib import Path
+from playwright.sync_api import ViewportSize, sync_playwright
 from playwright_stealth import Stealth
+from provider_sources import PROVIDER_SOURCES
+from scraper_utils import log as print
 
 # setup
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 
 is_ci = os.environ.get('CI') == 'true'
 
@@ -173,14 +177,14 @@ def get_market_price(page, product_name):
         page.goto(url, wait_until="domcontentloaded", timeout=25000)
         page.wait_for_timeout(random.uniform(2000, 3500))
     except Exception:
-        print(f"  -> Could not load page for: {product_name}")
+        print(f"Could not load page for: {product_name}")
         return None, False
 
     # each product card is an <a> with a title attribute and href starting with "/pl/"
     card_links = page.query_selector_all('a[href^="/pl/"][title]')
 
     if not card_links:
-        print(f"  -> No product cards found")
+        print(f"No product cards found")
         return None, True
 
     # collect (title, price_text) for every card
@@ -216,7 +220,7 @@ def get_market_price(page, product_name):
             candidates.append((title, price_text))
 
     if not candidates:
-        print(f"  -> Could not extract any prices")
+        print(f"Could not extract any prices")
         return None, True
 
     query_clean = clean_search_query(product_name)
@@ -228,14 +232,14 @@ def get_market_price(page, product_name):
     scored = [s for s in scored if s[0] > 0.0]
 
     if not scored:
-        print(f"  -> All candidates disqualified")
+        print(f"All candidates disqualified")
         return None, True
 
     scored.sort(key=lambda x: x[0], reverse=True)
     best_score = scored[0][0]
 
     if best_score < 0.4:
-        print(f"  -> Best score {best_score:.2f} below threshold, skipping")
+        print(f"Best score {best_score:.2f} below threshold, skipping")
         return None, True
 
     # keep candidates within 15% of the best score — wide enough for storage/colour variants to all be included
@@ -252,10 +256,9 @@ def get_market_price(page, product_name):
         top_candidates.sort(key=storage_sort_key)
         best_score, best_title, best_price_text = top_candidates[0]
 
-    print(f"  -> Matched: '{best_title}' (score={best_score:.2f})")
+    print(f"Matched: '{best_title}' (score={best_score:.2f})")
 
-    # danish format: "." is thousands separator, "," is decimal separator
-    # e.g. "10.899,00 kr." → 10899
+    # get price as int, eg "10.899,00 kr." -> 10899
     price_clean = re.sub(r'\.(?=\d{3}(\D|$))', '', best_price_text)  # strip thousands dots
     price_clean = re.sub(r',\d+', '', price_clean)                    # strip decimal fraction
     digits = "".join(re.findall(r'\d+', price_clean))
@@ -266,7 +269,7 @@ def make_fresh_page(browser):
 
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        viewport={"width": 1920, "height": 1080},
+        viewport=VIEWPORT,
         locale="da-DK",
         timezone_id="Europe/Copenhagen",
         color_scheme="light",
@@ -307,29 +310,19 @@ def make_fresh_page(browser):
 
 
 def scrape_pricerunner():
-    os.makedirs(os.path.join(BASE_DIR, 'data/pricerunner'), exist_ok=True)
-
-    providers = [
-        ('data/telmore/telmore_offers.json', 'product_name'),
-        ('data/telmore_tilgift/telmore_tilgift_offers.json', 'product_name'),
-        ('data/oister/oister_offers.json', 'product_name'),
-        ('data/elgiganten/elgiganten_offers.json', 'product'),
-        ('data/cbb/cbb_offers.json', 'product_name'),
-        ('data/3/3_offers.json', 'product_name'),
-        ('data/yousee/yousee_offers.json', 'product_name'),
-        ('data/norlys/norlys_offers.json', 'product_name'),
-        ('data/callme/callme_offers.json', 'product_name'),
-    ]
+    (BASE_DIR / 'data' / 'pricerunner').mkdir(parents=True, exist_ok=True)
 
     # collect unique product names from all provider files
     products = []
-    for path, name_field in providers:
-        full_path = os.path.join(BASE_DIR, path)
-        if os.path.exists(full_path):
-            with open(full_path, encoding='utf-8') as f:
+    for path, name_field in PROVIDER_SOURCES:
+        full_path = BASE_DIR / path
+        if full_path.exists():
+            with full_path.open(encoding='utf-8') as f:
                 offers = json.load(f)
             for offer in offers:
                 name = offer.get(name_field, '')
+                if not name and name_field == 'product_name':
+                    name = offer.get('product', '')
                 if name:
                     products.append(name)
 
@@ -382,7 +375,7 @@ def scrape_pricerunner():
         context.close()
         browser.close()
 
-    with open(os.path.join(BASE_DIR, 'data/pricerunner/pricerunner_prices.json'), 'w', encoding='utf-8') as f:
+    with (BASE_DIR / 'data' / 'pricerunner' / 'pricerunner_prices.json').open('w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 
     print(f"\nLooked up {len(results)} products.")

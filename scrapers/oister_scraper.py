@@ -1,13 +1,16 @@
 import requests
 from bs4 import BeautifulSoup
-import json
-import datetime
 import re
-import os
+from pathlib import Path
+from typing import TypedDict
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print, offer_summary
 
 # setup
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
 AFFILIATE_PREFIX = "https://go.adt284.net/t/t?a=1666103641&as=2054240298&t=2&tk=1&url="
+DATA_DIR = BASE_DIR / "data" / "oister"
+IMAGE_DIR = BASE_DIR / "public" / "images" / "oister"
+OUTPUT_PATH = DATA_DIR / "oister_offers.json"
 
 # Blocked products due to bad naming by oister (will be skipped)
 BLOCKED_PRODUCTS = [
@@ -15,26 +18,35 @@ BLOCKED_PRODUCTS = [
 ]
 
 
+class OfferItem(TypedDict):
+    link: str
+    product_name: str
+    image_url: str
+    provider: str
+    type: str
+    price_without_subscription: int | str
+    price_with_subscription: int | str
+    min_cost_6_months: int | str
+    subscription_price_monthly: int | str
+    discount_on_product: int | str
+    saved_at: str
+
+
+def _bs4_str(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
 def download_image(image_url, product_name):
-    if not image_url or not product_name:
-        return ""
-
-    filename = re.sub(r'[^a-z0-9]', '_', product_name.lower()) + ".webp"
-    save_path = os.path.join(BASE_DIR, f"public/images/oister/{filename}")
-    os.makedirs(os.path.join(BASE_DIR, "public/images/oister"), exist_ok=True)
-
-    if os.path.exists(save_path):
-        return f"/images/oister/{filename}"
-
-    img_response = requests.get(image_url)
-    if img_response.status_code == 200:
-        with open(save_path, 'wb') as f:
-            f.write(img_response.content)
-        return f"/images/oister/{filename}"
-    return ""
+    return download_image_cached(
+        image_url,
+        product_name,
+        IMAGE_DIR,
+        "/images/oister",
+        base_url="https://www.oister.dk",
+    )
 
 
-def product_name_from_url(href, fallback_name):
+def product_name_from_url(href: str, fallback_name: str) -> str:
 
     # the url pattern is always: <subscription-description>-inkl-<product-name>
     url = href.rstrip('/').split('/')[-1]  # take last path segment
@@ -50,12 +62,12 @@ def product_name_from_url(href, fallback_name):
 
 
 def scrape_oister():
-    os.makedirs(os.path.join(BASE_DIR, 'data/oister'), exist_ok=True)
-    os.makedirs(os.path.join(BASE_DIR, 'public/images/oister'), exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     url = "https://www.oister.dk/tilbehor-til-abonnement"
     response = requests.get(url)
-    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    date_time = now_timestamp()
 
     if response.status_code != 200:
         print(f"Error! Could not fetch the page. Status code: {response.status_code}")
@@ -71,7 +83,7 @@ def scrape_oister():
     scraped_data = []
 
     for offer in offer_list:
-        item = {
+        item: OfferItem = {
             "link": "",
             "product_name": "",
             "image_url": "",
@@ -91,7 +103,7 @@ def scrape_oister():
             # find all images and pick the one with 'tilgift' in src (the actual product)
             all_imgs = image_div.find_all('img')
             for img in all_imgs:
-                src = img.get('src') or img.get('data-src') or ''
+                src = _bs4_str(img.get('src')) or _bs4_str(img.get('data-src'))
                 if 'tilgift' in src:
                     if src.startswith('/'):
                         item["image_url"] = f"https://www.oister.dk{src}"
@@ -134,7 +146,7 @@ def scrape_oister():
         if product_card:
             link_tag = product_card.find('a')
             if link_tag:
-                href = link_tag.get('href')
+                href = _bs4_str(link_tag.get('href'))
                 if href:
                     full_link = f"https://www.oister.dk{href}" if href.startswith('/') else href
                     item["link"] = AFFILIATE_PREFIX + full_link
@@ -175,9 +187,16 @@ def scrape_oister():
                 print(f"  Skipping blocked product: {item['product_name']} (matched: '{matched_keyword}')")
             else:
                 scraped_data.append(item)
+                offer_summary(
+                    item["product_name"],
+                    sub=item["price_with_subscription"],
+                    rabat=item["discount_on_product"],
+                    kontant=item["price_without_subscription"],
+                    min6=item["min_cost_6_months"],
+                    md=item["subscription_price_monthly"],
+                )
 
-    with open(os.path.join(BASE_DIR, 'data/oister/oister_offers.json'), 'w', encoding='utf-8') as f:
-        json.dump(scraped_data, f, ensure_ascii=False, indent=4)
+    write_json(OUTPUT_PATH, scraped_data)
 
     print(f"Exported {len(scraped_data)} offers to 'data/oister/oister_offers.json'")
 

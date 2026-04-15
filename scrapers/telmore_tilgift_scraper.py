@@ -1,35 +1,23 @@
-import json
-import os
 import re
-import datetime
-import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from pathlib import Path
+from playwright.sync_api import ViewportSize, sync_playwright
+from scraper_utils import download_image_cached, now_timestamp, write_json, log as print, offer_summary
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_URL = "https://www.telmore.dk"
+DATA_DIR = BASE_DIR / "data" / "telmore"
+IMAGE_DIR = BASE_DIR / "public" / "images" / "telmore"
+OUTPUT_PATH = DATA_DIR / "telmore_tilgift_offers.json"
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 
 
 def download_image(image_url, product_name):
-    if not image_url:
-        return ""
+    return download_image_cached(image_url, product_name, IMAGE_DIR, "/images/telmore")
 
-    filename = re.sub(r'[^a-z0-9]', '_', product_name.lower()) + ".webp"
-    save_path = os.path.join(BASE_DIR, f"public/images/telmore/{filename}")
-    os.makedirs(os.path.join(BASE_DIR, "public/images/telmore"), exist_ok=True)
 
-    if os.path.exists(save_path):
-        return f"/images/telmore/{filename}"
-
-    try:
-        img_response = requests.get(image_url, timeout=15)
-        if img_response.status_code == 200:
-            with open(save_path, 'wb') as f:
-                f.write(img_response.content)
-            return f"/images/telmore/{filename}"
-    except Exception as e:
-        print(f"  Image download failed for {product_name}: {e}")
-    return ""
+def _bs4_str(value: object) -> str:
+    return value if isinstance(value, str) else ""
 
 
 def scrape_detail_page(page, url):
@@ -44,23 +32,27 @@ def scrape_detail_page(page, url):
     image_url = ""
 
     # min cost
-    disclaimer = soup.find('p', class_='text--xs') or soup.find('p', class_='mb-0')
-    if disclaimer:
-        text = disclaimer.get_text(" ", strip=True)
-        m = re.search(r'Mindstepris\s*:\s*(\d[\d.]*)\s*kr', text, re.IGNORECASE)
-        if m:
-            min_cost_6_months = int(m.group(1).replace('.', ''))
-        else:
-            m = re.search(r'Mindstepris\s+kr\.?\s*:\s*(\d+)', text, re.IGNORECASE)
+    for p in soup.find_all('p'):
+        classes = p.get('class') or []
+        if 'text--xs' in classes or 'mb-0' in classes:
+            text = p.get_text(strip=True)
+            m = re.search(r'Mindstepris\s*:\s*(\d[\d.]*)\s*kr', text, re.IGNORECASE)
             if m:
-                min_cost_6_months = int(m.group(1))
+                min_cost_6_months = int(m.group(1).replace('.', ''))
+            else:
+                m = re.search(r'Mindstepris\s+kr\.?\s*:\s*(\d+)', text, re.IGNORECASE)
+                if m:
+                    min_cost_6_months = int(m.group(1))
+            break
 
     # discount
-    discount_span = soup.find('span', string=re.compile(r'Mobilrabat|Rabat', re.IGNORECASE))
-    if discount_span:
-        discount_val = "".join(re.findall(r'\d+', discount_span.get_text()))
-        if discount_val:
-            discount_on_product = int(discount_val)
+    for span in soup.find_all('span'):
+        span_text = span.get_text(strip=True)
+        if re.search(r'Mobilrabat|Rabat', span_text, re.IGNORECASE):
+            discount_val = "".join(re.findall(r'\d+', span_text))
+            if discount_val:
+                discount_on_product = int(discount_val)
+            break
 
     # subscription monthly price
     for strong in soup.find_all('strong'):
@@ -71,17 +63,16 @@ def scrape_detail_page(page, url):
             break
 
     # img
-    img_tag = soup.find('img', class_='product-list-card-campaign-image')
-    if img_tag:
-        src = img_tag.get('src', '')
-        if src.startswith('//'):
-            image_url = 'https:' + src
-        else:
-            image_url = src
+    for img_tag in soup.find_all('img'):
+        classes = img_tag.get('class') or []
+        if 'product-list-card-campaign-image' in classes:
+            src = _bs4_str(img_tag.get('src', ''))
+            image_url = 'https:' + src if src.startswith('//') else src
+            break
     # Fallback
     if not image_url:
         for img in soup.find_all('img'):
-            src = img.get('src', '')
+            src = _bs4_str(img.get('src', ''))
             if 'ctfassets' in src:
                 image_url = src
                 break
@@ -90,20 +81,20 @@ def scrape_detail_page(page, url):
 
 
 def scrape_telmore_tilgift():
-    os.makedirs(os.path.join(BASE_DIR, 'data/telmore'), exist_ok=True)
-    os.makedirs(os.path.join(BASE_DIR, 'public/images/telmore'), exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     listing_url = "https://www.telmore.dk/shop/tilgift/"
-    date_time = datetime.datetime.now().strftime("%d-%m-%Y-%H:%M")
+    date_time = now_timestamp()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
             args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
         )
-        page = browser.new_page(viewport={"width": 1920, "height": 1080})
+        page = browser.new_page(viewport=VIEWPORT)
 
-        # --- Scrape listing page ---
+        # scrape listing page
         print(f"Loading listing: {listing_url}")
         page.goto(listing_url, timeout=60000, wait_until="domcontentloaded")
         page.wait_for_timeout(3000)
@@ -121,21 +112,23 @@ def scrape_telmore_tilgift():
             price_tag = card.find('span', class_='tlm-product-list-card__price')
             link_tag = card.find('a', href=True)
 
-            product_name = name_tag.get_text(strip=True) if name_tag else ""
-            brand = brand_tag.get_text(strip=True) if brand_tag else ""
-            full_name = f"{brand} {product_name}".strip() if brand else product_name
+            product_name = _bs4_str(name_tag.get_text(strip=True)) if name_tag else ""
+            brand = _bs4_str(brand_tag.get_text(strip=True)) if brand_tag else ""
+            full_name = product_name
+            if brand:
+                full_name = f"{brand} {product_name}".strip()
 
             # Product price (what you pay for the gift item)
             product_price = None
             if price_tag:
-                val = "".join(re.findall(r'\d+', price_tag.get_text()))
+                price_text = _bs4_str(price_tag.get_text(strip=True))
+                val = "".join(re.findall(r'\d+', price_text))
                 if val:
                     product_price = int(val)
 
-            href = link_tag['href'] if link_tag else ""
+            href = _bs4_str(link_tag.get('href')) if link_tag else ""
             detail_url = (BASE_URL + href) if href.startswith('/') else href
 
-            print(f"  Scraping detail: {full_name} -> {detail_url}")
             min_cost_6_months, discount_on_product, subscription_price_monthly, image_url = scrape_detail_page(page, detail_url)
 
             # Download image
@@ -175,15 +168,20 @@ def scrape_telmore_tilgift():
                 continue
 
             scraped_data.append(item)
-            print(f"    price_with_subscription={price_with_subscription}, discount_on_product={discount_on_product}, min_cost_6_months={min_cost_6_months}")
+            offer_summary(
+                full_name,
+                sub=price_with_subscription,
+                rabat=discount_on_product,
+                kontant=price_without_subscription,
+                min6=min_cost_6_months,
+                md=subscription_price_monthly,
+            )
 
         browser.close()
 
-    out_path = os.path.join(BASE_DIR, 'data/telmore/telmore_tilgift_offers.json')
-    with open(out_path, 'w', encoding='utf-8') as f:
-        json.dump(scraped_data, f, ensure_ascii=False, indent=4)
+    write_json(OUTPUT_PATH, scraped_data)
 
-    print(f"\nExported {len(scraped_data)} tilgift offers to {out_path}")
+    print(f"\nExported {len(scraped_data)} tilgift offers to {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":
