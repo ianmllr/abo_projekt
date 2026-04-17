@@ -87,7 +87,9 @@ def extract_model_number(text):
              '5g', '4g', 'lte', 'dual', 'sim', 'sm', 'smartphone', 'wireless',
              'black', 'white', 'blue', 'green', 'grey', 'gray', 'silver', 'gold',
              'sort', 'grå', 'hvid', 'obsidian', 'coral', 'red', 'jetblack',
-             'dark', 'true', 'on', 'ear', 'tws', 'gen'}
+             'dark', 'true', 'on', 'ear', 'tws', 'gen', 'space black', 'wifi',
+             # tablet screen sizes — not model numbers
+             '10', '11', '12', '13', '14', '15', '16', '17', '18', '20', '24', '27'}
     noise.update(TIER_WORDS)
     tokens = normalize(text).split()
     for token in tokens:
