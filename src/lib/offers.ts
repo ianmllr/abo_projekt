@@ -6,7 +6,7 @@ import cbb from '../../data/cbb/cbb_offers.json'
 import three from '../../data/3/3_offers.json'
 import yousee from '../../data/yousee/yousee_offers.json'
 import norlys from '../../data/norlys/norlys_offers.json'
-import callme from '../../data/callme/callme_offers.json'
+import callme_raw from '../../data/callme/callme_offers.json'
 import prisjagt from '../../data/prisjagt/prisjagt_prices.json'
 import pricerunner from '../../data/pricerunner/pricerunner_prices.json'
 import type { Offer } from '@/types/offer'
@@ -25,7 +25,21 @@ type ElgigantenOffer = {
     subscription_price_monthly: number
 }
 
+type ProviderOffer = {
+    link: string
+    product_name: string
+    image_url: string
+    type?: string
+    price_with_subscription: number
+    price_without_subscription: number
+    discount_on_product: number
+    min_cost_6_months: number
+    subscription_price_monthly: number
+    subscription_price_monthly_after_promo?: number | null
+}
+
 const elgiganten = elgiganten_raw as ElgigantenOffer[]
+const callme = callme_raw as ProviderOffer[]
 
 const prisjagtLookup = prisjagt as Record<string, { market_price: number | null }>
 const pricerunnerLookup = pricerunner as Record<string, { market_price: number | null }>
