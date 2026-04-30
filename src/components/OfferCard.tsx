@@ -21,7 +21,7 @@ export default function OfferCard({ offer }: OfferCardProps) {
                     alt={offer.product_name}
                     width={120}
                     height={120}
-                    className="object-contain flex-shrink-0 self-center"
+                    className="object-contain shrink-0 self-center"
                 />
             )}
 
@@ -55,7 +55,7 @@ export default function OfferCard({ offer }: OfferCardProps) {
                     {offer.market_price ? (
                         <>
                             Markedspris: {offer.market_price} kr.
-                            <Tooltip text="Billigste tilbud lige nu iflg. pricerunner/prisjagt" />
+                            <Tooltip text="Billigste tilbud lige nu iflg. pricerunner/prisjagt. Priser kan være forkerte, så dobbelttjek altid." />
                         </>
                     ) : (
                         <span className="text-[#7d8fa0] italic">Ingen markedspris fundet</span>
