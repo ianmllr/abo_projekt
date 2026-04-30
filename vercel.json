@@ -28,8 +28,14 @@
   ],
   "redirects": [
     {
-      "source": "/((?!_next/|api/|favicon.ico|.*\\..*).+)",
-      "destination": "https://tech-tilbud.com/$1",
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.tech-tilbud.com"
+        }
+      ],
+      "destination": "https://tech-tilbud.com/:path*",
       "permanent": true
     }
   ]
