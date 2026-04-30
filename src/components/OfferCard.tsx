@@ -21,7 +21,7 @@ export default function OfferCard({ offer }: OfferCardProps) {
                     alt={offer.product_name}
                     width={120}
                     height={120}
-                    className="object-contain shrink-0 self-center"
+                    className="object-contain shrink-0 self-center w-30 h-30"
                 />
             )}
 
