@@ -174,6 +174,8 @@ def build_entry(hit, product_type, date_time, use_api_category=False):
     variant_name = variant.get("name", hit.get("productName", ""))
     variant_name = normalize_product_name(variant_name)
     variant_name = apply_name_substitutions(variant_name)
+    if product_type == "gaming":
+        variant_name = re.sub(r"\s+med\s+abonnement\s*$", "", variant_name, flags=re.IGNORECASE).strip()
 
     badge = variant.get("badgeText") or {}
     sold_out = "true" if "udsolgt" in (badge.get("item2", "")).lower() else "false"
