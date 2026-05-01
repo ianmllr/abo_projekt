@@ -17,9 +17,13 @@ def download_image(image_url, product_name):
 
 
 def scrape_detail_page(page, url):
-    page.goto(url, timeout=60000, wait_until="domcontentloaded")
-    page.wait_for_timeout(2500)
-    soup = BeautifulSoup(page.content(), 'html.parser')
+    try:
+        page.goto(url, timeout=60000, wait_until="domcontentloaded")
+        page.wait_for_timeout(2500)
+        soup = BeautifulSoup(page.content(), 'html.parser')
+    except Exception as e:
+        log(f"  [WARN] Could not load detail page {url}: {e}")
+        return None
 
     # subscription price is only on detail page. it's almost always 299, but that could change
 
@@ -46,9 +50,16 @@ def scrape_telmore():
         )
         # very tall viewport to load images for all products
         page = browser.new_page(viewport=VIEWPORT)
-        page.goto(url, timeout=60000, wait_until="domcontentloaded")
-        page.wait_for_selector('div.carousel-image-wrapper')
-        page.wait_for_timeout(3000)
+        try:
+            page.goto(url, timeout=60000, wait_until="domcontentloaded")
+            page.wait_for_selector('div.carousel-image-wrapper')
+            page.wait_for_timeout(3000)
+        except Exception as e:
+            log(f"[WARN] Could not load Telmore listing page {url}: {e}")
+            browser.close()
+            write_json(OUTPUT_PATH, [])
+            log("Exported 0 offers due to page load failure")
+            return
         html = page.content()
 
         soup = BeautifulSoup(html, 'html.parser')
