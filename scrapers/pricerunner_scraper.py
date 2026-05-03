@@ -275,6 +275,7 @@ def get_market_price(page, product_name):
             s = extract_storage(item[1])
             return s if s is not None else 9999
 
+
         top_candidates.sort(key=storage_sort_key)
         min_storage = storage_sort_key(top_candidates[0])
         storage_group = [item for item in top_candidates if storage_sort_key(item) == min_storage]
